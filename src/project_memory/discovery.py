@@ -34,12 +34,15 @@ def discover_sources(
     devin = devin_database(base, data_home)
     hooks = canonical / ".windsurf" / "hooks.json"
     inbox = Path(windsurf_inbox).expanduser() if windsurf_inbox is not None else None
-    antigravity = base / ".gemini" / "antigravity" / "conversations"
+    antigravity_locations = [
+        base / ".gemini" / name / "conversations"
+        for name in ("antigravity", "antigravity-ide")
+    ]
     return [
         {"source": "codex", "available": codex.is_dir(), "locations": [str(codex)]},
         {"source": "devin", "available": devin.is_file(), "locations": [str(devin)]},
         {"source": "claude", "available": any(path.is_dir() for path in claude_locations), "locations": [str(path) for path in claude_locations]},
-        {"source": "antigravity", "available": antigravity.is_dir() and any(antigravity.glob("*.db")), "locations": [str(antigravity)]},
+        {"source": "antigravity", "available": any(path.is_dir() and any(path.glob("*.db")) for path in antigravity_locations), "locations": [str(path) for path in antigravity_locations]},
         {
             "source": "windsurf",
             "available": bool(inbox and inbox.is_dir() and any(inbox.glob("*.jsonl"))),

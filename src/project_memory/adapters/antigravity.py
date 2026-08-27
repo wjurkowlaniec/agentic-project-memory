@@ -107,16 +107,23 @@ class AntigravityAdapter:
         self.conversations_dir = Path(conversations_dir).expanduser() if conversations_dir else None
         self.brain_dir = Path(brain_dir).expanduser() if brain_dir else None
 
-    def _locations(self, config: ProjectConfig) -> tuple[Path, Path]:
+    def _locations(self, config: ProjectConfig) -> tuple[tuple[Path, Path], ...]:
         configured = config.source_locations.get(self.source)
         if self.conversations_dir is not None:
-            conversations = self.conversations_dir
+            return ((self.conversations_dir, self.brain_dir or self.conversations_dir.parent / "brain"),)
         elif configured:
             conversations = Path(configured).expanduser()
-        else:
-            conversations = Path.home() / ".gemini" / "antigravity" / "conversations"
-        brain = self.brain_dir or conversations.parent / "brain"
-        return conversations, brain
+            locations = [(conversations, self.brain_dir or conversations.parent / "brain")]
+            if conversations.name == "conversations" and conversations.parent.name in {"antigravity", "antigravity-ide"}:
+                sibling_name = "antigravity-ide" if conversations.parent.name == "antigravity" else "antigravity"
+                sibling = conversations.parent.parent / sibling_name / "conversations"
+                locations.append((sibling, sibling.parent / "brain"))
+            return tuple(locations)
+        gemini = Path.home() / ".gemini"
+        return tuple(
+            (gemini / name / "conversations", gemini / name / "brain")
+            for name in ("antigravity", "antigravity-ide")
+        )
 
     def _matches_project(self, database: Path, members: set[Path]) -> bool:
         snapshot = _snapshot(database)
@@ -135,8 +142,8 @@ class AntigravityAdapter:
         return bool(paths & members)
 
     def scan(self, config: ProjectConfig, state: dict[str, object]) -> SyncBatch:
-        conversations, brain = self._locations(config)
-        if not conversations.is_dir():
+        locations = self._locations(config)
+        if not any(conversations.is_dir() for conversations, _ in locations):
             return SyncBatch(0, (), dict(state), ())
         members = {config.root, *config.aliases}
         files = dict(state.get("files", {}))
@@ -145,80 +152,83 @@ class AntigravityAdapter:
         commands: list[NormalizedCommand] = []
         sessions: set[str] = set()
         warning = False
-        for database in sorted(conversations.glob("*.db")):
-            if not database.is_file() or database.is_symlink():
+        for conversations, brain in locations:
+            if not conversations.is_dir():
                 continue
-            try:
-                if not self._matches_project(database, members):
+            for database in sorted(conversations.glob("*.db")):
+                if not database.is_file() or database.is_symlink():
                     continue
-            except (OSError, sqlite3.Error, ValueError, TypeError):
-                warning = True
-                continue
-            session_id = database.stem
-            logs = brain / session_id / ".system_generated" / "logs"
-            transcript = logs / "transcript_full.jsonl"
-            if not transcript.is_file() or transcript.is_symlink():
-                transcript = logs / "transcript.jsonl"
-            if not transcript.is_file() or transcript.is_symlink():
-                continue
-            try:
-                data = transcript.read_bytes()
-            except OSError:
-                warning = True
-                continue
-            key = str(transcript.resolve())
-            digest = hashlib.sha256(data).hexdigest()
-            if files.get(key) == digest:
-                continue
-            for line in data.decode("utf-8", errors="replace").splitlines():
                 try:
-                    row = json.loads(line)
-                except ValueError:
+                    if not self._matches_project(database, members):
+                        continue
+                except (OSError, sqlite3.Error, ValueError, TypeError):
                     warning = True
                     continue
-                if not isinstance(row, dict) or row.get("status") != "DONE":
+                session_id = database.stem
+                logs = brain / session_id / ".system_generated" / "logs"
+                transcript = logs / "transcript_full.jsonl"
+                if not transcript.is_file() or transcript.is_symlink():
+                    transcript = logs / "transcript.jsonl"
+                if not transcript.is_file() or transcript.is_symlink():
                     continue
-                row_type = row.get("type")
-                timestamp = str(row.get("created_at", ""))
-                step = str(row.get("step_index", ""))
-                content = row.get("content")
-                if row_type in {"USER_INPUT", "PLANNER_RESPONSE"} and isinstance(content, str) and content:
-                    role = "user" if row_type == "USER_INPUT" else "assistant"
-                    message_id = f"{step}:{row_type}"
-                    messages.append(NormalizedMessage(
-                        self.source, session_id, message_id, config.project_id, role,
-                        timestamp, content, None, hashlib.sha256(content.encode("utf-8")).hexdigest(), {},
-                    ))
-                    sessions.add(session_id)
-                for index, call in enumerate(row.get("tool_calls", [])):
-                    if not isinstance(call, dict) or str(call.get("name", "")).lower() not in _COMMAND_TOOLS:
-                        continue
-                    arguments = call.get("args", call.get("arguments", {}))
-                    if isinstance(arguments, str):
-                        try:
-                            arguments = json.loads(arguments)
-                        except ValueError:
-                            continue
-                    if not isinstance(arguments, dict):
-                        continue
-                    command = arguments.get("command", arguments.get("cmd"))
-                    if not isinstance(command, str) or not command.strip():
-                        continue
-                    cwd_value = arguments.get("cwd", arguments.get("workdir", config.root))
+                try:
+                    data = transcript.read_bytes()
+                except OSError:
+                    warning = True
+                    continue
+                key = str(transcript.resolve())
+                digest = hashlib.sha256(data).hexdigest()
+                if files.get(key) == digest:
+                    continue
+                for line in data.decode("utf-8", errors="replace").splitlines():
                     try:
-                        cwd = Path(str(cwd_value)).expanduser().resolve(strict=False)
-                    except (OSError, RuntimeError):
+                        row = json.loads(line)
+                    except ValueError:
+                        warning = True
                         continue
-                    if not any(cwd == member or member in cwd.parents for member in members):
+                    if not isinstance(row, dict) or row.get("status") != "DONE":
                         continue
-                    command_id = str(call.get("id") or f"{step}:{index}")
-                    clean = command.strip()
-                    commands.append(NormalizedCommand(
-                        self.source, session_id, command_id, config.project_id, timestamp,
-                        clean, str(cwd), hashlib.sha256(f"{clean}\0{cwd}".encode("utf-8")).hexdigest(),
-                    ))
-                    sessions.add(session_id)
-            next_files[key] = digest
+                    row_type = row.get("type")
+                    timestamp = str(row.get("created_at", ""))
+                    step = str(row.get("step_index", ""))
+                    content = row.get("content")
+                    if row_type in {"USER_INPUT", "PLANNER_RESPONSE"} and isinstance(content, str) and content:
+                        role = "user" if row_type == "USER_INPUT" else "assistant"
+                        message_id = f"{step}:{row_type}"
+                        messages.append(NormalizedMessage(
+                            self.source, session_id, message_id, config.project_id, role,
+                            timestamp, content, None, hashlib.sha256(content.encode("utf-8")).hexdigest(), {},
+                        ))
+                        sessions.add(session_id)
+                    for index, call in enumerate(row.get("tool_calls", [])):
+                        if not isinstance(call, dict) or str(call.get("name", "")).lower() not in _COMMAND_TOOLS:
+                            continue
+                        arguments = call.get("args", call.get("arguments", {}))
+                        if isinstance(arguments, str):
+                            try:
+                                arguments = json.loads(arguments)
+                            except ValueError:
+                                continue
+                        if not isinstance(arguments, dict):
+                            continue
+                        command = arguments.get("command", arguments.get("cmd"))
+                        if not isinstance(command, str) or not command.strip():
+                            continue
+                        cwd_value = arguments.get("cwd", arguments.get("workdir", config.root))
+                        try:
+                            cwd = Path(str(cwd_value)).expanduser().resolve(strict=False)
+                        except (OSError, RuntimeError):
+                            continue
+                        if not any(cwd == member or member in cwd.parents for member in members):
+                            continue
+                        command_id = str(call.get("id") or f"{step}:{index}")
+                        clean = command.strip()
+                        commands.append(NormalizedCommand(
+                            self.source, session_id, command_id, config.project_id, timestamp,
+                            clean, str(cwd), hashlib.sha256(f"{clean}\0{cwd}".encode("utf-8")).hexdigest(),
+                        ))
+                        sessions.add(session_id)
+                next_files[key] = digest
         next_state = dict(state)
         next_state["files"] = next_files
         warnings = ("antigravity: source data partially unreadable",) if warning else ()

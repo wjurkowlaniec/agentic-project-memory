@@ -6,6 +6,7 @@ import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from project_memory.adapters.antigravity import AntigravityAdapter
 from project_memory.config import ProjectConfig
@@ -103,6 +104,24 @@ class AntigravityAdapterTests(unittest.TestCase):
 
         self.assertEqual(result.messages, ())
         self.assertEqual(result.commands, ())
+
+    def test_default_scan_reads_both_antigravity_installation_roots(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            root = Path(tmp) / "project"; root.mkdir()
+            for installation, conversation_id in (("antigravity", "classic"), ("antigravity-ide", "ide")):
+                conversations = home / ".gemini" / installation / "conversations"
+                conversations.mkdir(parents=True)
+                brain = home / ".gemini" / installation / "brain"; brain.mkdir()
+                self.create_conversation(conversations, brain, conversation_id, root, [{
+                    "step_index": 1, "type": "USER_INPUT", "status": "DONE",
+                    "created_at": "2026-08-27T10:00:00Z", "content": installation,
+                }])
+            with patch("project_memory.adapters.antigravity.Path.home", return_value=home):
+                result = AntigravityAdapter().scan(ProjectConfig.create("project", root), {})
+
+        self.assertEqual({message.session_id for message in result.messages}, {"classic", "ide"})
+        self.assertEqual({message.content for message in result.messages}, {"antigravity", "antigravity-ide"})
 
 
 if __name__ == "__main__":

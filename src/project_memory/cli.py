@@ -122,7 +122,6 @@ def main(argv: Sequence[str] | None = None) -> int:
                     "devin": str(devin_database()),
                     "windsurf": str(paths.project_dir / "sources" / "windsurf"),
                     "claude": str(claude_project_dir(root)),
-                    "antigravity": str(Path.home() / ".gemini" / "antigravity" / "conversations"),
                 },
                 model_names={key: value for key, value in {
                     "extraction": os.environ.get("PMEM_EXTRACTION_MODEL", ""),

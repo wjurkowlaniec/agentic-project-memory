@@ -16,8 +16,8 @@ class DiscoveryTests(unittest.TestCase):
             (home / ".local" / "share" / "devin" / "cli").mkdir(parents=True)
             (home / ".local" / "share" / "devin" / "cli" / "sessions.db").touch()
             (home / ".claude" / "projects" / "-tmp-project").mkdir(parents=True)
-            (home / ".gemini" / "antigravity" / "conversations").mkdir(parents=True)
-            (home / ".gemini" / "antigravity" / "conversations" / "conversation.db").touch()
+            (home / ".gemini" / "antigravity-ide" / "conversations").mkdir(parents=True)
+            (home / ".gemini" / "antigravity-ide" / "conversations" / "conversation.db").touch()
             (root / ".windsurf").mkdir()
             (root / ".windsurf" / "hooks.json").write_text('{"hooks": {}}', encoding="utf-8")
             found = discover_sources(root, home=home, claude_dirs=[home / ".claude" / "projects" / "-tmp-project"])
@@ -27,6 +27,7 @@ class DiscoveryTests(unittest.TestCase):
         self.assertTrue(by_source["devin"]["available"])
         self.assertTrue(by_source["claude"]["available"])
         self.assertTrue(by_source["antigravity"]["available"])
+        self.assertEqual(len(by_source["antigravity"]["locations"]), 2)
         self.assertTrue(by_source["windsurf"]["hook_configured"])
         self.assertFalse(by_source["windsurf"]["available"])
 
