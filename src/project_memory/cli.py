@@ -11,14 +11,16 @@ from .adapters.codex import CodexAdapter
 from .adapters.hermes import HermesAdapter
 from .adapters.devin import DevinAdapter
 from .adapters.windsurf import WindsurfAdapter, capture_windsurf_event
+from .adapters.claude import ClaudeAdapter
 from .benchmark import BenchmarkError, BenchmarkRunner, load_fixture, write_report
 from .config import ProjectConfig, ProjectPaths, load_project_config, save_project_config
 from .extraction import ExtractionEngine
 from .lmstudio import LMStudioClient
 from .rules import install_rules
 from .service import ProjectMemoryService
+from .discovery import claude_project_dir, devin_database, discover_sources
 
-COMMANDS = ("init", "sync", "search", "preflight", "inspect", "suppress", "correct", "benchmark", "install-rules", "status", "rebuild", "capture-windsurf")
+COMMANDS = ("init", "sync", "search", "preflight", "inspect", "suppress", "correct", "benchmark", "install-rules", "status", "rebuild", "capture-windsurf", "discover")
 _DISPLAY_QUOTE_LIMIT = 600
 _DISPLAY_TRUNCATION_MARKER = " …[truncated]"
 
@@ -40,6 +42,7 @@ def _parser() -> argparse.ArgumentParser:
     bench.add_argument("--allow-combined-models", action="store_true", help=argparse.SUPPRESS)
     rules = subs.add_parser("install-rules"); rules.add_argument("--root", required=True); rules.add_argument("--create-agents", action="store_true")
     capture = subs.add_parser("capture-windsurf"); capture.add_argument("--root", required=True)
+    discover = subs.add_parser("discover"); discover.add_argument("--root")
     return parser
 
 
@@ -52,6 +55,7 @@ def service_factory(root: Path) -> ProjectMemoryService:
         "hermes": HermesAdapter(),
         "devin": DevinAdapter(),
         "windsurf": WindsurfAdapter(),
+        "claude": ClaudeAdapter(),
     }
     client = LMStudioClient()
     extraction_model = config.model_names.get("extraction")
@@ -107,8 +111,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                 aliases=tuple(Path(alias).expanduser().resolve() for alias in args.alias),
                 source_locations={
                     "codex": str(Path.home() / ".codex" / "sessions"),
-                    "devin": str(Path.home() / ".local/share/devin/cli/sessions.db"),
+                    "devin": str(devin_database()),
                     "windsurf": str((Path(os.environ["PMEM_DATA_HOME"]).expanduser() if os.environ.get("PMEM_DATA_HOME") else Path.home() / ".project-memory") / "projects" / ProjectConfig.create(args.name, root).project_id / "sources" / "windsurf"),
+                    "claude": str(claude_project_dir(root)),
                 },
                 model_names={key: value for key, value in {
                     "extraction": os.environ.get("PMEM_EXTRACTION_MODEL", ""),
@@ -118,6 +123,21 @@ def main(argv: Sequence[str] | None = None) -> int:
             data_home = Path(os.environ["PMEM_DATA_HOME"]).expanduser() if os.environ.get("PMEM_DATA_HOME") else None
             save_project_config(config, ProjectPaths.for_root(root, data_home))
             print(f"Initialized project {config.name} ({config.project_id}) at {config.root}")
+            return 0
+        if args.command == "discover":
+            root = Path(args.root).expanduser().resolve() if args.root else Path.cwd().resolve()
+            data_home = Path(os.environ["PMEM_DATA_HOME"]).expanduser() if os.environ.get("PMEM_DATA_HOME") else None
+            try:
+                config = load_project_config(root, data_home)
+                windsurf_inbox = Path(config.source_locations.get("windsurf", "")).expanduser() if config.source_locations.get("windsurf") else None
+                claude_dirs = [Path(config.source_locations["claude"]).expanduser()] if config.source_locations.get("claude") else None
+            except ValueError:
+                windsurf_inbox = None
+                claude_dirs = None
+            for item in discover_sources(root, claude_dirs=claude_dirs, windsurf_inbox=windsurf_inbox):
+                state = "available" if item["available"] else "not found"
+                suffix = "; hook configured" if item.get("hook_configured") else ""
+                print(f"{item['source']}: {state}{suffix}")
             return 0
         if args.command == "capture-windsurf":
             data_home = Path(os.environ["PMEM_DATA_HOME"]).expanduser() if os.environ.get("PMEM_DATA_HOME") else None

@@ -11,10 +11,11 @@ from pathlib import Path
 from typing import Any
 
 from ..config import ProjectConfig
+from ..discovery import devin_database
 from ..models import NormalizedMessage
 from .base import SyncBatch
 
-_DEFAULT_DB = Path.home() / ".local/share/devin/cli/sessions.db"
+_DEFAULT_DB = devin_database()
 _SAFE_SESSION_FIELDS = ("backend_type", "model", "agent_mode", "title")
 
 

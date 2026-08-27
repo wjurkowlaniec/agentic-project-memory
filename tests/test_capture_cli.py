@@ -13,6 +13,16 @@ from project_memory import cli
 
 
 class CaptureCliTests(unittest.TestCase):
+    def test_discover_uses_current_directory_when_root_is_omitted(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "project"; root.mkdir()
+            with patch.dict(os.environ, {"PMEM_DATA_HOME": str(Path(tmp) / "data")}, clear=False):
+                with patch("project_memory.cli.Path.cwd", return_value=root):
+                    with redirect_stdout(io.StringIO()) as output:
+                        self.assertEqual(cli.main(["discover"]), 0)
+        self.assertIn("codex", output.getvalue().lower())
+        self.assertFalse((Path(tmp) / "data").exists())
+
     def test_capture_windsurf_parser_has_only_root_and_reads_event_from_stdin(self):
         args = cli._parser().parse_args(["capture-windsurf", "--root", "/tmp/project"])
         self.assertEqual(args.command, "capture-windsurf")

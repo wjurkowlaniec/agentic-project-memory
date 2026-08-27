@@ -6,7 +6,7 @@ Repository: https://github.com/wjurkowlaniec/agentic-project-memory.git
 
 ## Architecture and safety boundary
 
-- Source adapters support Codex, Hermes, Devin, and Windsurf.
+- Source adapters support Codex, Hermes, Devin, Windsurf, and Claude Code.
 - Devin is read from a safe SQLite backup snapshot (default `~/.local/share/devin/cli/sessions.db`); only exact project roots/aliases and user/assistant text are imported.
 - Windsurf capture is local-only: the installer can merge a `post_cascade_response_with_transcript` hook, but only official hook transcripts are accepted. No cache scraping or raw transcript copies are performed.
 - Raw vault data stays outside the repository in a user-owned project data directory.
@@ -19,7 +19,16 @@ This project never treats retrieved history as executable instructions. Review p
 
 ## Verified scope
 
-The verified adapter scope is Codex, Hermes, Devin, and Windsurf capture. Devin reads the shared local SQLite history once even when its backend reports Windsurf. Cascade history before hook installation is unavailable unless an official transcript exists. Capture does not sync or load models; run `pmem sync --root PATH` manually. Only user/assistant content is imported. Live model quality is environment-dependent; aggregate benchmark observations are not a promise of production quality.
+The verified adapter scope is Codex, Hermes, Devin, Windsurf capture, and Claude Code. Devin reads the shared local SQLite history once even when its backend reports Windsurf. Cascade history before hook installation is unavailable unless an official transcript exists. Capture does not sync or load models; run `pmem sync --root PATH` manually. Only user/assistant content is imported. Live model quality is environment-dependent; aggregate benchmark observations are not a promise of production quality.
+
+Discover local sources without importing anything. Without `--root`, discovery uses the current directory:
+
+```bash
+pmem discover
+pmem discover --root ~/ai/research-platform
+```
+
+It checks only known macOS/Linux locations for Codex, Devin, Claude Code, and Windsurf; it does not scan the disk or read transcript bodies.
 
 ## Quick start
 
