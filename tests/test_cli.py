@@ -37,8 +37,13 @@ class CliTests(unittest.TestCase):
     def test_help_lists_all_commands(self):
         code, output = self.run_cli(["--help"])
         self.assertEqual(code, 0)
-        for command in ("init", "sync", "search", "preflight", "inspect", "suppress", "correct", "benchmark", "install-rules", "status", "rebuild"):
+        for command in ("init", "sync", "search", "preflight", "inspect", "suppress", "correct", "benchmark", "install-rules", "status", "rebuild", "commands"):
             self.assertIn(command, output)
+
+    def test_commands_parser_supports_import_and_sorted_listing(self):
+        parser = cli._parser()
+        self.assertEqual(parser.parse_args(["commands", "import-history"]).command_action, "import-history")
+        self.assertEqual(parser.parse_args(["commands"]).command_action, "list")
 
     def test_quote_compactor_preserves_short_exact_text_after_whitespace_normalization(self):
         self.assertEqual(cli._compact_display_quote("short quote"), "short quote")

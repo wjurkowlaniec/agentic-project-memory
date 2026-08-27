@@ -19,8 +19,9 @@ from .lmstudio import LMStudioClient
 from .rules import install_rules
 from .service import ProjectMemoryService
 from .discovery import claude_project_dir, devin_database, discover_sources
+from .command_history import CommandHistoryIndex
 
-COMMANDS = ("init", "sync", "search", "preflight", "inspect", "suppress", "correct", "benchmark", "install-rules", "status", "rebuild", "capture-windsurf", "discover", "migrate-local")
+COMMANDS = ("init", "sync", "search", "preflight", "inspect", "suppress", "correct", "benchmark", "install-rules", "status", "rebuild", "capture-windsurf", "discover", "migrate-local", "commands")
 _DISPLAY_QUOTE_LIMIT = 600
 _DISPLAY_TRUNCATION_MARKER = " …[truncated]"
 
@@ -44,6 +45,7 @@ def _parser() -> argparse.ArgumentParser:
     capture = subs.add_parser("capture-windsurf"); capture.add_argument("--root")
     discover = subs.add_parser("discover"); discover.add_argument("--root")
     migrate = subs.add_parser("migrate-local"); migrate.add_argument("--root")
+    commands = subs.add_parser("commands"); commands.add_argument("command_action", choices=("import-history", "list"), nargs="?", default="list"); commands.add_argument("--limit", type=int, default=50); commands.add_argument("--root")
     return parser
 
 
@@ -180,11 +182,29 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0 if result["gate_passed"] is not False else 1
         service = service_factory(_project_root(args.root))
         try:
+            if args.command == "commands":
+                index = CommandHistoryIndex(service.paths.project_dir / "commands.sqlite3")
+                try:
+                    if args.command_action == "import-history":
+                        result = index.import_history()
+                        print(f"Indexed {result['commands']} command(s) from {result['records']} history record(s).")
+                    else:
+                        for row in index.list_commands(args.limit):
+                            last = row["last_seen"] or "unknown"
+                            print(f"{last}\t{row['count']}\t{row['command']}")
+                finally:
+                    index.close()
+                return 0
             if args.command == "sync":
                 if args.extract and service.extractor is None:
                     raise ValueError("extraction_model_not_configured")
                 result = service.sync(extract=args.extract if hasattr(args, "extract") else None)
-                print(f"Synced {result.get('messages', 0)} message(s) in {result.get('sessions', 0)} session(s); pending extraction: {result.get('pending', 0)}.")
+                index = CommandHistoryIndex(service.paths.project_dir / "commands.sqlite3")
+                try:
+                    commands = index.import_history()
+                finally:
+                    index.close()
+                print(f"Synced {result.get('messages', 0)} message(s) in {result.get('sessions', 0)} session(s); pending extraction: {result.get('pending', 0)}; commands indexed: {commands['commands']}.")
                 return 0
             if args.command == "search":
                 for result in service.search(" ".join(args.query), args.limit): _print_citation(result)

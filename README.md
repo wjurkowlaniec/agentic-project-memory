@@ -30,6 +30,8 @@ pmem discover --root ~/ai/research-platform
 
 It checks only known macOS/Linux locations for Codex, Devin, Claude Code, and Windsurf; it does not scan the disk or read transcript bodies.
 
+`pmem sync` also maintains a local, sanitized aggregate of existing zsh/bash/fish history. Show it with `pmem commands`; rebuild it explicitly with `pmem commands import-history`. Historical commands are marked `unscoped-history` because normal shell history does not reliably retain the working directory.
+
 Project memory is always local to the project:
 
 ```text
