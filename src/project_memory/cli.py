@@ -28,20 +28,20 @@ _DISPLAY_TRUNCATION_MARKER = " …[truncated]"
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="pmem", description="Local, project-scoped memory")
     subs = parser.add_subparsers(dest="command")
-    init = subs.add_parser("init"); init.add_argument("--root", required=True); init.add_argument("--name", required=True); init.add_argument("--alias", action="append", default=[])
+    init = subs.add_parser("init"); init.add_argument("--root"); init.add_argument("--name", required=True); init.add_argument("--alias", action="append", default=[])
     for name in ("sync", "status", "rebuild"):
-        p = subs.add_parser(name); p.add_argument("--root", required=True)
+        p = subs.add_parser(name); p.add_argument("--root")
         if name == "sync": p.add_argument("--extract", action="store_true")
-    search = subs.add_parser("search"); search.add_argument("--root", required=True); search.add_argument("query", nargs="+"); search.add_argument("--limit", type=int, default=10)
-    pre = subs.add_parser("preflight"); pre.add_argument("--root", required=True); pre.add_argument("query", nargs="+"); pre.add_argument("--limit", type=int, default=10)
-    inspect = subs.add_parser("inspect"); inspect.add_argument("--root", required=True); inspect.add_argument("object_id"); inspect.add_argument("--raw", action="store_true"); inspect.add_argument("--yes", action="store_true")
-    suppress = subs.add_parser("suppress"); suppress.add_argument("--root", required=True); suppress.add_argument("item_id"); suppress.add_argument("--reason", required=True)
-    correct = subs.add_parser("correct"); correct.add_argument("--root", required=True); correct.add_argument("item_id"); correct.add_argument("--statement", required=True)
-    bench = subs.add_parser("benchmark"); bench.add_argument("--root", required=True); bench.add_argument("--fixture", required=True); bench.add_argument("--model", required=True); bench.add_argument("--embedding-model"); bench.add_argument("--base-url", default="http://127.0.0.1:1234/v1"); bench.add_argument("--allow-remote", action="store_true"); bench.add_argument("--dry-run", action="store_true")
+    search = subs.add_parser("search"); search.add_argument("--root"); search.add_argument("query", nargs="+"); search.add_argument("--limit", type=int, default=10)
+    pre = subs.add_parser("preflight"); pre.add_argument("--root"); pre.add_argument("query", nargs="+"); pre.add_argument("--limit", type=int, default=10)
+    inspect = subs.add_parser("inspect"); inspect.add_argument("--root"); inspect.add_argument("object_id"); inspect.add_argument("--raw", action="store_true"); inspect.add_argument("--yes", action="store_true")
+    suppress = subs.add_parser("suppress"); suppress.add_argument("--root"); suppress.add_argument("item_id"); suppress.add_argument("--reason", required=True)
+    correct = subs.add_parser("correct"); correct.add_argument("--root"); correct.add_argument("item_id"); correct.add_argument("--statement", required=True)
+    bench = subs.add_parser("benchmark"); bench.add_argument("--root"); bench.add_argument("--fixture", required=True); bench.add_argument("--model", required=True); bench.add_argument("--embedding-model"); bench.add_argument("--base-url", default="http://127.0.0.1:1234/v1"); bench.add_argument("--allow-remote", action="store_true"); bench.add_argument("--dry-run", action="store_true")
     modes = bench.add_mutually_exclusive_group(); modes.add_argument("--extraction-only", action="store_true"); modes.add_argument("--retrieval-only", action="store_true")
     bench.add_argument("--allow-combined-models", action="store_true", help=argparse.SUPPRESS)
-    rules = subs.add_parser("install-rules"); rules.add_argument("--root", required=True); rules.add_argument("--create-agents", action="store_true")
-    capture = subs.add_parser("capture-windsurf"); capture.add_argument("--root", required=True)
+    rules = subs.add_parser("install-rules"); rules.add_argument("--root"); rules.add_argument("--create-agents", action="store_true")
+    capture = subs.add_parser("capture-windsurf"); capture.add_argument("--root")
     discover = subs.add_parser("discover"); discover.add_argument("--root")
     return parser
 
@@ -65,6 +65,10 @@ def service_factory(root: Path) -> ProjectMemoryService:
     return ProjectMemoryService.init(config, paths, adapters=adapters, extractor=extractor,
                                      embedder=embedder, extraction_enabled=bool(extractor),
                                      embedding_model=embedding_model or "nomic")
+
+
+def _project_root(value: str | None) -> Path:
+    return Path(value).expanduser().resolve() if value else Path.cwd().resolve()
 
 
 def _compact_display_quote(value: object) -> str:
@@ -105,7 +109,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         parser.print_help(); return 0
     try:
         if args.command == "init":
-            root = Path(args.root).expanduser().resolve()
+            root = _project_root(args.root)
             config = ProjectConfig(
                 name=args.name, root=root,
                 aliases=tuple(Path(alias).expanduser().resolve() for alias in args.alias),
@@ -125,7 +129,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(f"Initialized project {config.name} ({config.project_id}) at {config.root}")
             return 0
         if args.command == "discover":
-            root = Path(args.root).expanduser().resolve() if args.root else Path.cwd().resolve()
+            root = _project_root(args.root)
             data_home = Path(os.environ["PMEM_DATA_HOME"]).expanduser() if os.environ.get("PMEM_DATA_HOME") else None
             try:
                 config = load_project_config(root, data_home)
@@ -141,7 +145,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
         if args.command == "capture-windsurf":
             data_home = Path(os.environ["PMEM_DATA_HOME"]).expanduser() if os.environ.get("PMEM_DATA_HOME") else None
-            config = load_project_config(Path(args.root), data_home)
+            config = load_project_config(_project_root(args.root), data_home)
             paths = ProjectPaths.for_root(config.root, data_home)
             inbox = Path(config.source_locations.get("windsurf", str(paths.project_dir / "sources" / "windsurf"))).expanduser()
             event = __import__("json").load(sys.stdin)
@@ -149,12 +153,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(f"Captured Windsurf transcript: {captured}")
             return 0
         if args.command == "install-rules":
-            paths = install_rules(Path(args.root), create_agents=args.create_agents)
+            paths = install_rules(_project_root(args.root), create_agents=args.create_agents)
             print(f"Installed project-memory rules in {len(paths)} file(s).")
             return 0
         if args.command == "benchmark":
             data_home = Path(os.environ["PMEM_DATA_HOME"]).expanduser() if os.environ.get("PMEM_DATA_HOME") else None
-            config = load_project_config(Path(args.root), data_home)
+            config = load_project_config(_project_root(args.root), data_home)
             paths = ProjectPaths.for_root(config.root, data_home)
             fixture = load_fixture(Path(args.fixture))
             embedding_model = None if args.extraction_only else (args.embedding_model or config.model_names.get("embedding"))
@@ -173,7 +177,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             if not result["quality_eligible"]:
                 print("INELIGIBLE: mechanics-only run; no model-quality gate was evaluated.")
             return 0 if result["gate_passed"] is not False else 1
-        service = service_factory(Path(args.root))
+        service = service_factory(_project_root(args.root))
         try:
             if args.command == "sync":
                 if args.extract and service.extractor is None:

@@ -115,6 +115,15 @@ class CliTests(unittest.TestCase):
         self.assertEqual(service.calls, [("sync", {"extract": False})])
         self.assertIn("Synced 2 message(s)", output)
 
+    def test_sync_uses_current_directory_when_root_is_omitted(self):
+        service = FakeService()
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch("project_memory.cli.Path.cwd", return_value=Path(tmp)):
+                code, output = self.run_cli(["sync"], service)
+        self.assertEqual(code, 0)
+        self.assertEqual(service.calls, [("sync", {"extract": False})])
+        self.assertIn("Synced 2 message(s)", output)
+
     def test_benchmark_modes_are_mutually_exclusive_at_cli_boundary(self):
         code, output = self.run_cli(["benchmark", "--root", "/tmp/x", "--fixture", "fixture", "--model", "model", "--extraction-only", "--retrieval-only"])
         self.assertEqual(code, 2)
