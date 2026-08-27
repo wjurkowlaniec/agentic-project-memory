@@ -14,7 +14,8 @@ class FakeService:
         self.calls = []
         self.extractor = None
 
-    def sync(self, **kwargs): self.calls.append(("sync", kwargs)); return {"messages": 2, "sessions": 1, "pending": 1, "warnings": []}
+    def sync(self, **kwargs): self.calls.append(("sync", kwargs)); return {"messages": 2, "sessions": 1, "pending": 1, "commands": 3, "warnings": []}
+    def list_commands(self, limit=50): return [{"last_seen": "2026-08-27", "count": 2, "command": "git status"}]
     def search(self, query, limit=10):
         self.calls.append(("search", query, limit))
         return [type("R", (), {"object_id": "message:x", "source": "codex", "session_id": "s", "timestamp": "now", "quote": "redacted quote", "state": "provisional", "kind": "observation", "inspect_command": "pmem inspect --root <project> message:x"})()]
@@ -40,10 +41,17 @@ class CliTests(unittest.TestCase):
         for command in ("init", "sync", "search", "preflight", "inspect", "suppress", "correct", "benchmark", "install-rules", "status", "rebuild", "commands"):
             self.assertIn(command, output)
 
-    def test_commands_parser_supports_import_and_sorted_listing(self):
+    def test_commands_parser_has_project_listing_only(self):
         parser = cli._parser()
-        self.assertEqual(parser.parse_args(["commands", "import-history"]).command_action, "import-history")
-        self.assertEqual(parser.parse_args(["commands"]).command_action, "list")
+        self.assertEqual(parser.parse_args(["commands"]).command, "commands")
+        with self.assertRaises(SystemExit):
+            parser.parse_args(["commands", "import-history"])
+
+    def test_commands_lists_service_project_index(self):
+        service = FakeService()
+        code, output = self.run_cli(["commands", "--root", "/tmp/x"], service)
+        self.assertEqual(code, 0)
+        self.assertIn("git status", output)
 
     def test_quote_compactor_preserves_short_exact_text_after_whitespace_normalization(self):
         self.assertEqual(cli._compact_display_quote("short quote"), "short quote")
@@ -119,6 +127,7 @@ class CliTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(service.calls, [("sync", {"extract": False})])
         self.assertIn("Synced 2 message(s)", output)
+        self.assertIn("project command event(s): 3", output)
 
     def test_sync_uses_current_directory_when_root_is_omitted(self):
         service = FakeService()

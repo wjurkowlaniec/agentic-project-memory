@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from .config import ProjectConfig, ProjectPaths
+from .command_history import ProjectCommandIndex
 from .embeddings import EmbeddingIndex
 from .extraction import ExtractionEngine
 from .models import NormalizedMessage
@@ -31,6 +32,7 @@ class ProjectMemoryService:
         self.redactor, self.extractor, self.embedder = redactor or Redactor(), extractor, embedder
         self.extraction_enabled, self.clock = extraction_enabled, clock
         self.vault = VaultRepository(paths.vault_db); self.memory = MemoryRepository(paths.memory_db)
+        self.commands = ProjectCommandIndex(paths.project_dir / "commands.sqlite3", redactor=self.redactor)
         self.embedding_index = EmbeddingIndex(self.memory, model=embedding_model, dimension=embedding_dimension)
         self.retriever = HybridRetriever(self.memory, self.embedding_index, embedder, model=embedding_model, redactor=self.redactor)
         self.receipt_db_insert_hook = None
@@ -40,7 +42,7 @@ class ProjectMemoryService:
 
     @classmethod
     def init(cls, config, paths, adapters=None, **kwargs): return cls(config, paths, adapters or {}, **kwargs)
-    def close(self): self.vault.close(); self.memory.close()
+    def close(self): self.vault.close(); self.memory.close(); self.commands.close()
 
     def _redact_value(self, value):
         if isinstance(value, str): return self.redactor.redact(value).text
@@ -94,7 +96,7 @@ class ProjectMemoryService:
         return job
 
     def sync(self, *, extract=None):
-        summary={"sessions":0,"messages":0,"pending":0,"warnings":[]}; do_extract=self.extraction_enabled if extract is None else extract
+        summary={"sessions":0,"messages":0,"commands":0,"pending":0,"warnings":[]}; do_extract=self.extraction_enabled if extract is None else extract
         self._retry_embeddings()
         if do_extract and self.extractor is not None:
             for row in self.memory.connection.execute("SELECT * FROM extraction_jobs WHERE project_id=? AND status='pending'",(self.config.project_id,)).fetchall():
@@ -113,8 +115,13 @@ class ProjectMemoryService:
                 if do_extract and self.extractor is not None:
                     result=self._extract(derived)
                     if result.status=="pending": summary["pending"]+=1
+            command_result = self.commands.upsert_commands(batch.commands, self.config.project_id)
+            summary["commands"] += command_result["events"]
             self.memory.set_sync_state(source,batch.next_state); summary["sessions"]+=batch.sessions_seen; summary["warnings"].extend(batch.warnings)
         return summary
+
+    def list_commands(self, limit=50):
+        return self.commands.list_commands(self.config.project_id, limit)
 
     def search(self, query, limit=10, *, include_history=False): return self.retriever.search(self.config.project_id,query,limit,include_history=include_history)
 

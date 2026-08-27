@@ -55,11 +55,15 @@ class DevinAdapterTests(unittest.TestCase):
         db.executemany("INSERT INTO sessions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", sessions)
         nodes = [
             ("root", 101, None, json.dumps({"role": "user", "content": "Root request."}), 1_700_000_001, "{}"),
-            ("root", 102, 101, json.dumps({"role": "assistant", "content": "Root answer."}), 1_700_000_002, "{}"),
+            ("root", 102, 101, json.dumps({"role": "assistant", "content": "Root answer.", "tool_calls": [
+                {"id": "devin-exec", "function": {"name": "exec", "arguments": {"command": "git status"}}},
+            ]}), 1_700_000_002, "{}"),
             ("root", 103, 102, json.dumps({"role": "tool", "content": "DO NOT IMPORT TOOL BODY"}), 1_700_000_003, "{}"),
             ("alias", 201, None, json.dumps({"role": "user", "content": "Alias request."}), 1_700_000_004, "{}"),
             ("prefix", 301, None, json.dumps({"role": "user", "content": "DO NOT IMPORT PREFIX"}), 1_700_000_005, "{}"),
-            ("other", 401, None, json.dumps({"role": "user", "content": "DO NOT IMPORT OTHER"}), 1_700_000_006, "{}"),
+            ("other", 401, None, json.dumps({"role": "assistant", "content": "DO NOT IMPORT OTHER", "tool_calls": [
+                {"id": "other-exec", "function": {"name": "exec", "arguments": {"command": "cat secret"}}},
+            ]}), 1_700_000_006, "{}"),
             ("root", 104, None, "{malformed chat json", 1_700_000_007, "{}"),
             ("root", 105, None, json.dumps({"role": "user", "content": ["DO NOT IMPORT MALFORMED SCHEMA"]}), 1_700_000_008, "{}"),
         ]
@@ -97,6 +101,8 @@ class DevinAdapterTests(unittest.TestCase):
         self.assertTrue(all(message.source_path is None for message in first.messages))
         self.assertEqual(first.messages[0].source_hash, hashlib.sha256(b"Root request.").hexdigest())
         self.assertTrue(all(set(message.metadata) <= {"backend_type", "model", "agent_mode", "title"} for message in first.messages))
+        self.assertEqual([(command.command_id, command.command) for command in first.commands], [("devin-exec", "git status")])
+        self.assertEqual(first.commands[0].cwd, str(root.resolve()))
 
     def test_malformed_chat_json_or_schema_is_only_a_generic_batch_warning(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -126,6 +132,7 @@ class DevinAdapterTests(unittest.TestCase):
             source_after_second = database.read_bytes()
 
         self.assertEqual(second.messages, ())
+        self.assertEqual(second.commands, ())
         self.assertEqual(second.sessions_seen, 0)
         self.assertEqual(second.next_state, first.next_state)
         self.assertEqual(source_after_second, source_after_first)

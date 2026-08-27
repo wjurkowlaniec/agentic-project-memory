@@ -6,7 +6,7 @@ from pathlib import Path
 
 from project_memory.adapters.base import SyncBatch
 from project_memory.config import ProjectConfig, ProjectPaths
-from project_memory.models import NormalizedMessage
+from project_memory.models import NormalizedCommand, NormalizedMessage
 from project_memory.redaction import Redactor
 from project_memory.service import ProjectMemoryService
 
@@ -76,6 +76,22 @@ class ServiceTests(unittest.TestCase):
         self.addCleanup(svc.close)
         self.assertEqual(svc.search("secret"), [])
         self.assertNotEqual(self.config.project_id, other.project_id)
+
+    def test_sync_indexes_only_commands_emitted_by_project_adapter(self):
+        command = NormalizedCommand("fake", "session", "c1", self.config.project_id,
+                                    "2026-08-27T12:00:00Z", "git status", str(self.root), "hash-c1")
+        adapter = FakeAdapter([SyncBatch(1, (), {"cursor": 1}, (), (command,))])
+        svc = ProjectMemoryService(self.config, self.paths, {"fake": adapter})
+        self.addCleanup(svc.close)
+
+        result = svc.sync()
+
+        self.assertEqual(result["commands"], 1)
+        self.assertEqual(svc.list_commands(), [{
+            "command": "git status", "count": 1,
+            "first_seen": "2026-08-27T12:00:00Z", "last_seen": "2026-08-27T12:00:00Z",
+            "scope": "project-conversation",
+        }])
 
 
 if __name__ == "__main__":

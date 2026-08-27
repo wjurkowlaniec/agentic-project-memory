@@ -18,7 +18,11 @@ class ClaudeAdapterTests(unittest.TestCase):
             transcript = folder / "session.jsonl"
             transcript.write_text("\n".join(json.dumps(row) for row in [
                 {"type": "user", "sessionId": "session", "cwd": str(root), "timestamp": "2026-08-27T12:00:00Z", "message": {"role": "user", "content": "Need local memory."}},
-                {"type": "assistant", "sessionId": "session", "cwd": str(root), "timestamp": "2026-08-27T12:01:00Z", "message": {"role": "assistant", "content": [{"type": "text", "text": "Use project scope."}]}},
+                {"type": "assistant", "sessionId": "session", "cwd": str(root), "timestamp": "2026-08-27T12:01:00Z", "message": {"role": "assistant", "content": [
+                    {"type": "text", "text": "Use project scope."},
+                    {"type": "tool_use", "id": "claude-bash", "name": "Bash", "input": {"command": "git status"}},
+                    {"type": "tool_use", "id": "claude-outside", "name": "Bash", "input": {"command": "cat secret", "workdir": str(Path(tmp) / "other")}},
+                ]}},
                 {"type": "tool", "sessionId": "session", "cwd": str(root), "message": {"role": "tool", "content": "DROP"}},
                 {"type": "user", "sessionId": "other", "cwd": str(root) + "-other", "message": {"role": "user", "content": "DROP"}},
             ]) + "\n", encoding="utf-8")
@@ -30,6 +34,8 @@ class ClaudeAdapterTests(unittest.TestCase):
             ("session:1", "assistant", "Use project scope."),
         ])
         self.assertTrue(all(item.source == "claude" for item in result.messages))
+        self.assertEqual([(command.command_id, command.command) for command in result.commands], [("claude-bash", "git status")])
+        self.assertEqual(result.commands[0].cwd, str(root.resolve()))
 
     def test_second_scan_is_idempotent_and_malformed_records_only_warn_generically(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -42,6 +48,7 @@ class ClaudeAdapterTests(unittest.TestCase):
 
         self.assertTrue(first.warnings)
         self.assertEqual(second.messages, ())
+        self.assertEqual(second.commands, ())
         self.assertEqual(second.next_state, first.next_state)
 
 

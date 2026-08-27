@@ -50,7 +50,7 @@ class HermesAdapterTests(unittest.TestCase):
             return subprocess.CompletedProcess(command, 3, "SECRET EXPORT BODY", "synthetic exporter failed")
 
         config = ProjectConfig.create("synthetic", Path("/synthetic/project"))
-        result = HermesAdapter(command_runner=runner).scan(config, {"newer_than": "2026-08-27T00:00:00Z"})
+        result = HermesAdapter(command_runner=runner).scan(config, {"newer_than": "2026-08-27T00:00:00Z", "command_index_version": 1})
         self.assertIn("--newer-than", calls[0])
         self.assertEqual(result.messages, ())
         self.assertTrue(any("exit 3" in warning for warning in result.warnings))
@@ -89,6 +89,50 @@ class HermesAdapterTests(unittest.TestCase):
         self.assertEqual(second.sessions_seen, 0)
         self.assertEqual(first.next_state["newer_than"], "2026-08-27T12:01:00Z")
         self.assertIn("--newer-than", commands[1])
+
+    def test_extracts_terminal_commands_only_from_exact_project_export(self):
+        matching = {"session_id": "project-session", "cwd": "/synthetic/project", "messages": [
+            {"id": "assistant", "role": "assistant", "timestamp": "2026-08-27T12:01:00Z", "content": "done", "tool_calls": [
+                {"id": "tool-good", "function": {"name": "terminal", "arguments": {"command": "git status", "workdir": "/synthetic/project/subdir"}}},
+                {"id": "tool-outside", "function": {"name": "terminal", "arguments": {"command": "cat secret", "workdir": "/other/project"}}},
+            ]},
+        ]}
+        unrelated = {"session_id": "other-session", "cwd": "/other/project", "messages": [
+            {"id": "assistant", "role": "assistant", "content": "done", "tool_calls": [
+                {"id": "tool-wrong-session", "function": {"name": "terminal", "arguments": {"command": "npm test"}}},
+            ]},
+        ]}
+        def runner(command, **kwargs):
+            return subprocess.CompletedProcess(command, 0, json.dumps(matching) + "\n" + json.dumps(unrelated), "")
+
+        result = HermesAdapter(command_runner=runner).scan(
+            ProjectConfig.create("synthetic", Path("/synthetic/project")), {})
+
+        self.assertEqual([(c.command_id, c.command) for c in result.commands], [("tool-good", "git status")])
+        self.assertEqual(result.commands[0].timestamp, "2026-08-27T12:01:00Z")
+        self.assertEqual(result.commands[0].cwd, "/synthetic/project/subdir")
+
+    def test_command_backfill_ignores_old_newer_than_checkpoint_once(self):
+        record = {"session_id": "project-session", "cwd": "/synthetic/project", "messages": [
+            {"id": "assistant", "role": "assistant", "timestamp": "2026-08-20T12:00:00Z", "content": "done", "tool_calls": [
+                {"id": "old-tool", "function": {"name": "terminal", "arguments": {"command": "git status"}}},
+            ]},
+        ]}
+        calls = []
+        def runner(command, **kwargs):
+            calls.append(command)
+            return subprocess.CompletedProcess(command, 0, json.dumps(record), "")
+
+        adapter = HermesAdapter(command_runner=runner)
+        config = ProjectConfig.create("synthetic", Path("/synthetic/project"))
+        first = adapter.scan(config, {"newer_than": "2026-08-27T00:00:00Z"})
+        second = adapter.scan(config, first.next_state)
+
+        self.assertNotIn("--newer-than", calls[0])
+        self.assertIn("--newer-than", calls[1])
+        self.assertEqual([command.command for command in first.commands], ["git status"])
+        self.assertEqual(second.commands, ())
+        self.assertEqual(first.next_state["command_index_version"], 1)
 
     def test_unredacted_export_is_sent_directly_to_injected_vault_writer(self):
         received = []

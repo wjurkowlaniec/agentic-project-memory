@@ -16,6 +16,18 @@ class NormalizedMessage:
 
 
 @dataclass(frozen=True)
+class NormalizedCommand:
+    source: str
+    session_id: str
+    command_id: str
+    project_id: str
+    timestamp: str
+    command: str
+    cwd: str
+    source_hash: str
+
+
+@dataclass(frozen=True)
 class KnowledgeCandidate:
     kind: str
     statement: str

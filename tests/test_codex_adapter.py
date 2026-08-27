@@ -92,6 +92,48 @@ class CodexAdapterTests(unittest.TestCase):
             result = CodexAdapter().scan(ProjectConfig.create("synthetic", Path("/synthetic/project")), {"paths": [str(target)]})
             self.assertEqual([(m.session_id, m.message_id) for m in result.messages], [("good", "good-msg")])
 
+    def test_extracts_commands_only_from_matching_project_session_and_workdir(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "commands.jsonl"
+            records = [
+                {"type": "session_meta", "payload": {"id": "good", "cwd": "/synthetic/project", "timestamp": "2026-08-27T10:00:00Z"}},
+                {"type": "response_item", "timestamp": "2026-08-27T10:01:00Z", "payload": {"type": "function_call", "name": "exec_command", "call_id": "call-good", "arguments": json.dumps({"cmd": "git status", "workdir": "/synthetic/project/subdir"})}},
+                {"type": "response_item", "payload": {"type": "function_call", "name": "exec_command", "call_id": "call-outside-workdir", "arguments": json.dumps({"cmd": "cat secret", "workdir": "/other/project"})}},
+                {"type": "session_meta", "payload": {"id": "wrong", "cwd": "/other/project"}},
+                {"type": "response_item", "payload": {"type": "function_call", "name": "exec_command", "call_id": "call-wrong-session", "arguments": json.dumps({"cmd": "npm test"})}},
+            ]
+            target.write_text("\n".join(json.dumps(record) for record in records) + "\n")
+            config = ProjectConfig.create("synthetic", Path("/synthetic/project"))
+            first = CodexAdapter().scan(config, {"paths": [str(target)]})
+            second = CodexAdapter().scan(config, first.next_state)
+
+        self.assertEqual([(c.command_id, c.command) for c in first.commands], [("call-good", "git status")])
+        self.assertEqual(first.commands[0].timestamp, "2026-08-27T10:01:00Z")
+        self.assertEqual(first.commands[0].cwd, "/synthetic/project/subdir")
+        self.assertEqual(second.commands, ())
+
+    def test_backfills_commands_from_checkpointed_file_once(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "checkpointed.jsonl"
+            records = [
+                {"type": "session_meta", "payload": {"id": "project-session", "cwd": "/synthetic/project"}},
+                {"type": "response_item", "payload": {"type": "function_call", "name": "exec_command", "call_id": "old-call", "arguments": json.dumps({"cmd": "git status"})}},
+            ]
+            target.write_text("\n".join(json.dumps(record) for record in records) + "\n")
+            data = target.read_bytes()
+            state = {"paths": [str(target)], "files": {str(target.resolve()): {
+                "offset": len(data), "rolling_hash": __import__("hashlib").sha256(data).hexdigest(),
+                "cwd": "/synthetic/project", "session_id": "project-session", "timestamp": "",
+            }}}
+            config = ProjectConfig.create("synthetic", Path("/synthetic/project"))
+            first = CodexAdapter().scan(config, state)
+            second = CodexAdapter().scan(config, first.next_state)
+
+        self.assertEqual([command.command for command in first.commands], ["git status"])
+        self.assertEqual(first.messages, ())
+        self.assertEqual(second.commands, ())
+        self.assertEqual(first.next_state["command_index_version"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()

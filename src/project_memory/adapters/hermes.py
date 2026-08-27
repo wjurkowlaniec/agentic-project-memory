@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Callable, Any
 
 from ..config import ProjectConfig
-from ..models import NormalizedMessage
+from ..models import NormalizedCommand, NormalizedMessage
 from ..redaction import Redactor
 from .base import SyncBatch
 
@@ -76,11 +76,14 @@ class HermesAdapter:
     def scan(self, config: ProjectConfig, state: dict[str, object]) -> SyncBatch:
         command = ["hermes", "sessions", "export", "--format", "jsonl", "--cwd", str(config.root), "--yes", "-"]
         newer = state.get("newer_than")
-        if newer:
+        command_backfill = state.get("command_index_version") != 1
+        if newer and not command_backfill:
             command[7:7] = ["--newer-than", str(newer)]
         messages_by_id: dict[tuple[str, str], NormalizedMessage] = {}
         session_ids: set[str] = set()
+        commands_by_id: dict[tuple[str, str], NormalizedCommand] = {}
         seen_hashes = {str(key): str(value) for key, value in dict(state.get("message_hashes", {})).items()}
+        seen_command_hashes = {str(key): str(value) for key, value in dict(state.get("command_hashes", {})).items()}
         def parse_line(line: str) -> None:
             nonlocal newer
             try:
@@ -94,17 +97,48 @@ class HermesAdapter:
             updated = str(session.get("updated_at", session.get("updated", "")))
             for item in session.get("messages", []):
                 role = item.get("role")
-                if role not in {"user", "assistant"}:
-                    continue
                 message_id = str(item.get("id", ""))
-                if not message_id:
+                timestamp = str(item.get("timestamp", updated))
+                if role == "assistant":
+                    for index, call in enumerate(item.get("tool_calls", [])):
+                        if not isinstance(call, dict):
+                            continue
+                        function = call.get("function", call)
+                        if not isinstance(function, dict) or function.get("name") != "terminal":
+                            continue
+                        arguments = function.get("arguments", function.get("input", {}))
+                        if isinstance(arguments, str):
+                            try:
+                                arguments = json.loads(arguments)
+                            except ValueError:
+                                continue
+                        if not isinstance(arguments, dict) or not isinstance(arguments.get("command"), str):
+                            continue
+                        workdir = Path(str(arguments.get("workdir") or cwd)).expanduser().resolve()
+                        members = {config.root, *config.aliases}
+                        if not any(workdir == member or member in workdir.parents for member in members):
+                            continue
+                        command_text = arguments["command"].strip()
+                        command_id = str(call.get("id") or call.get("call_id") or f"{message_id}:{index}")
+                        if not command_text or not command_id:
+                            continue
+                        digest = hashlib.sha256(f"{command_text}\0{workdir}".encode("utf-8")).hexdigest()
+                        checkpoint = f"{session_id}:{command_id}"
+                        if seen_command_hashes.get(checkpoint) == digest:
+                            continue
+                        commands_by_id[(session_id, command_id)] = NormalizedCommand(
+                            self.source, session_id, command_id, config.project_id,
+                            timestamp, command_text, str(workdir), digest,
+                        )
+                        seen_command_hashes[checkpoint] = digest
+                        session_ids.add(session_id)
+                if role not in {"user", "assistant"} or not message_id:
                     continue
-                content = str(item.get("content", item.get("text", "")))
-                if not content:
+                content = item.get("content", item.get("text", ""))
+                if not isinstance(content, str) or not content:
                     continue
                 digest = hashlib.sha256(content.encode("utf-8")).hexdigest()
                 checkpoint_key = f"{session_id}:{message_id}"
-                timestamp = str(item.get("timestamp", updated))
                 if seen_hashes.get(checkpoint_key) == digest:
                     continue
                 messages_by_id[(session_id, message_id)] = NormalizedMessage(self.source, session_id, message_id, config.project_id,
@@ -159,7 +193,7 @@ class HermesAdapter:
             if completed is None:
                 pass
             elif completed.returncode != 0:
-                return SyncBatch(0, (), dict(state), (f"Hermes exporter exit {completed.returncode}",))
+                return SyncBatch(0, (), dict(state), (f"Hermes exporter exit {completed.returncode}",), ())
             elif isinstance(completed.stdout, str):
                 for line in completed.stdout.splitlines():
                     parse_line(line)
@@ -192,9 +226,11 @@ class HermesAdapter:
             elif returncode != 0:
                 warnings.append(f"Hermes exporter exit {returncode}")
         if warnings:
-            return SyncBatch(0, (), dict(state), tuple(warnings))
+            return SyncBatch(0, (), dict(state), tuple(warnings), ())
         next_state = dict(state)
         if newer:
             next_state["newer_than"] = newer
         next_state["message_hashes"] = seen_hashes
-        return SyncBatch(len(session_ids), tuple(messages_by_id.values()), next_state, tuple(warnings))
+        next_state["command_hashes"] = seen_command_hashes
+        next_state["command_index_version"] = 1
+        return SyncBatch(len(session_ids), tuple(messages_by_id.values()), next_state, tuple(warnings), tuple(commands_by_id.values()))
