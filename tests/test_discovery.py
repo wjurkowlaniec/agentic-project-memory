@@ -16,6 +16,8 @@ class DiscoveryTests(unittest.TestCase):
             (home / ".local" / "share" / "devin" / "cli").mkdir(parents=True)
             (home / ".local" / "share" / "devin" / "cli" / "sessions.db").touch()
             (home / ".claude" / "projects" / "-tmp-project").mkdir(parents=True)
+            (home / ".gemini" / "antigravity" / "conversations").mkdir(parents=True)
+            (home / ".gemini" / "antigravity" / "conversations" / "conversation.db").touch()
             (root / ".windsurf").mkdir()
             (root / ".windsurf" / "hooks.json").write_text('{"hooks": {}}', encoding="utf-8")
             found = discover_sources(root, home=home, claude_dirs=[home / ".claude" / "projects" / "-tmp-project"])
@@ -24,6 +26,7 @@ class DiscoveryTests(unittest.TestCase):
         self.assertTrue(by_source["codex"]["available"])
         self.assertTrue(by_source["devin"]["available"])
         self.assertTrue(by_source["claude"]["available"])
+        self.assertTrue(by_source["antigravity"]["available"])
         self.assertTrue(by_source["windsurf"]["hook_configured"])
         self.assertFalse(by_source["windsurf"]["available"])
 
@@ -33,7 +36,7 @@ class DiscoveryTests(unittest.TestCase):
             root = Path(tmp) / "project"; root.mkdir()
             found = discover_sources(root, home=home)
 
-        self.assertEqual({item["source"] for item in found}, {"codex", "devin", "claude", "windsurf"})
+        self.assertEqual({item["source"] for item in found}, {"codex", "devin", "claude", "windsurf", "antigravity"})
         self.assertFalse(any(item["available"] for item in found))
 
     def test_uses_xdg_data_home_for_devin_on_linux(self):

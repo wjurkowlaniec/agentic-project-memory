@@ -29,4 +29,4 @@ Do not place raw history, message bodies, model output, API keys, endpoint detai
 
 ## Scope and limits
 
-Adapters support Codex, Hermes, Devin, Windsurf capture, and Claude Code. Commands are explicit and local; there is no daemon or cloud service. Benchmarks use synthetic fixtures and aggregate metrics, so results vary with model, hardware, residency, context, and endpoint availability.
+Adapters support Codex, Hermes, Devin, Windsurf capture, Claude Code, and current Antigravity SQLite conversations. Antigravity requires an exact project URI in trajectory metadata and skips opaque legacy `.pb` files. Commands are explicit and local; there is no daemon or cloud service. Benchmarks use synthetic fixtures and aggregate metrics, so results vary with model, hardware, residency, context, and endpoint availability.

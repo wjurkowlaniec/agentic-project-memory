@@ -12,6 +12,7 @@ from .adapters.hermes import HermesAdapter
 from .adapters.devin import DevinAdapter
 from .adapters.windsurf import WindsurfAdapter, capture_windsurf_event
 from .adapters.claude import ClaudeAdapter
+from .adapters.antigravity import AntigravityAdapter
 from .benchmark import BenchmarkError, BenchmarkRunner, load_fixture, write_report
 from .config import ProjectConfig, ProjectPaths, load_project_config, migrate_legacy_project, save_project_config
 from .extraction import ExtractionEngine
@@ -57,6 +58,7 @@ def service_factory(root: Path) -> ProjectMemoryService:
         "devin": DevinAdapter(),
         "windsurf": WindsurfAdapter(),
         "claude": ClaudeAdapter(),
+        "antigravity": AntigravityAdapter(),
     }
     client = LMStudioClient()
     extraction_model = config.model_names.get("extraction")
@@ -120,6 +122,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     "devin": str(devin_database()),
                     "windsurf": str(paths.project_dir / "sources" / "windsurf"),
                     "claude": str(claude_project_dir(root)),
+                    "antigravity": str(Path.home() / ".gemini" / "antigravity" / "conversations"),
                 },
                 model_names={key: value for key, value in {
                     "extraction": os.environ.get("PMEM_EXTRACTION_MODEL", ""),

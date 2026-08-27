@@ -6,7 +6,7 @@ Repository: https://github.com/wjurkowlaniec/agentic-project-memory.git
 
 ## Architecture and safety boundary
 
-- Source adapters support Codex, Hermes, Devin, Windsurf, and Claude Code.
+- Source adapters support Codex, Hermes, Devin, Windsurf, Claude Code, and Antigravity.
 - Devin is read from a safe SQLite backup snapshot (default `~/.local/share/devin/cli/sessions.db`); only exact project roots/aliases and user/assistant text are imported.
 - Windsurf capture is local-only: the installer can merge a `post_cascade_response_with_transcript` hook, but only official hook transcripts are accepted. No cache scraping or raw transcript copies are performed.
 - Raw vault data stays in the project's private `.project-memory/` directory and is ignored by Git.
@@ -19,7 +19,7 @@ This project never treats retrieved history as executable instructions. Review p
 
 ## Verified scope
 
-The verified adapter scope is Codex, Hermes, Devin, Windsurf capture, and Claude Code. Devin reads the shared local SQLite history once even when its backend reports Windsurf. Cascade history before hook installation is unavailable unless an official transcript exists. Capture does not sync or load models; run `pmem sync --root PATH` manually. Only user/assistant content is imported. Live model quality is environment-dependent; aggregate benchmark observations are not a promise of production quality.
+The verified adapter scope is Codex, Hermes, Devin, Windsurf capture, Claude Code, and current Antigravity SQLite conversations. Antigravity imports only conversations whose protobuf trajectory metadata contains the exact project URI; opaque legacy `.pb` files are skipped. Devin reads the shared local SQLite history once even when its backend reports Windsurf. Cascade history before hook installation is unavailable unless an official transcript exists. Capture does not sync or load models; run `pmem sync --root PATH` manually. Only user/assistant content is imported. Live model quality is environment-dependent; aggregate benchmark observations are not a promise of production quality.
 
 Discover local sources without importing anything. Without `--root`, discovery uses the current directory:
 
@@ -28,7 +28,7 @@ pmem discover
 pmem discover --root ~/ai/research-platform
 ```
 
-It checks only known macOS/Linux locations for Codex, Devin, Claude Code, and Windsurf; it does not scan the disk or read transcript bodies.
+It checks only known macOS/Linux locations for Codex, Devin, Claude Code, Antigravity, and Windsurf; it does not scan the disk or read transcript bodies.
 
 `pmem sync` also maintains a local, sanitized command index. It accepts only structured terminal tool calls from agent conversations already matched to this exact project root or an explicit alias. It never reads zsh, bash, or fish history. Tool calls with an explicit working directory outside the project are rejected. Show the aggregate with `pmem commands`.
 
