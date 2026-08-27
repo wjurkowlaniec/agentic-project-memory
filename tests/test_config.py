@@ -9,6 +9,7 @@ from project_memory.config import (
     ProjectConfig,
     ProjectPaths,
     load_project_config,
+    migrate_legacy_project,
     save_project_config,
 )
 
@@ -81,6 +82,23 @@ class ConfigTests(unittest.TestCase):
             self.assertEqual(config.project_id, paths.project_id)
             self.assertEqual(config.root, root.resolve())
             self.assertEqual(config.aliases, (alias.resolve(),))
+            self.assertTrue(str(paths.project_dir).startswith(str((root / ".project-memory").resolve())))
+
+    def test_migrates_legacy_global_project_data_into_local_dot_directory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "project"; root.mkdir()
+            legacy = Path(tmp) / "legacy"
+            config = ProjectConfig.create("project", root)
+            old_paths = ProjectPaths.for_root(root, legacy)
+            save_project_config(config, old_paths)
+            old_paths.vault_db.write_bytes(b"vault")
+
+            migrated = migrate_legacy_project(root, legacy_home=legacy)
+            local = ProjectPaths.for_root(root)
+            self.assertTrue(migrated)
+            self.assertTrue(local.config_file.exists())
+            self.assertEqual(local.vault_db.read_bytes(), b"vault")
+            self.assertFalse(old_paths.project_dir.exists())
 
     def test_records_are_immutable(self):
         from project_memory.models import KnowledgeCandidate, NormalizedMessage

@@ -104,6 +104,13 @@ else
     exit 2
 fi
 
+"$pmem" migrate-local --root "$project_root"
+
+gitignore_file="$project_root/.gitignore"
+if [[ ! -f "$gitignore_file" ]] || ! grep -Fqx '/.project-memory/' "$gitignore_file"; then
+    printf '%s\n' '/.project-memory/' >> "$gitignore_file"
+fi
+
 if "$pmem" status --root "$project_root" >/dev/null 2>&1; then
     printf 'Existing project registration preserved: %s\n' "$project_root"
 else

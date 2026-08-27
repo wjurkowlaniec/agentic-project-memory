@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import shutil
 import tempfile
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -85,7 +86,7 @@ class ProjectPaths:
     @classmethod
     def for_root(cls, root: Path, data_home: Path | None = None) -> "ProjectPaths":
         canonical = Path(root).expanduser().resolve()
-        base = (Path(data_home).expanduser() if data_home is not None else Path.home() / ".project-memory").resolve()
+        base = (Path(data_home).expanduser() if data_home is not None else canonical / ".project-memory").resolve()
         _secure_dir(base); _secure_dir(base / "projects")
         project_id = _project_id_for(canonical, base)
         project_dir = _secure_dir(base / "projects" / project_id)
@@ -94,6 +95,37 @@ class ProjectPaths:
 
 def _hash_root(root: Path) -> str:
     return hashlib.sha256(str(root).encode()).hexdigest()[:16]
+
+
+def migrate_legacy_project(root: Path, *, legacy_home: Path | None = None) -> bool:
+    """Move one old global project store into its local project directory once."""
+    canonical = Path(root).expanduser().resolve()
+    legacy_base = (Path(legacy_home).expanduser() if legacy_home is not None else Path.home() / ".project-memory").resolve()
+    project_id = _hash_root(canonical)
+    source = legacy_base / "projects" / project_id
+    if not (source / "config.json").is_file():
+        return False
+    destination_paths = ProjectPaths.for_root(canonical)
+    if destination_paths.config_file.exists():
+        return False
+    for child in source.iterdir():
+        target = destination_paths.project_dir / child.name
+        if target.exists():
+            if target.is_dir() and not any(target.iterdir()):
+                target.rmdir()
+            else:
+                raise ValueError("local_project_memory_conflict")
+        shutil.move(str(child), str(target))
+    source.rmdir()
+    registry_file = legacy_base / "registry.json"
+    if registry_file.exists():
+        registry = _read_registry(legacy_base)
+        registry.pop(project_id, None)
+        if registry:
+            _atomic_json(registry_file, {"projects": registry})
+        else:
+            registry_file.unlink()
+    return True
 
 
 def _read_registry(base: Path) -> dict[str, dict[str, object]]:
@@ -139,8 +171,8 @@ def save_project_config(config: ProjectConfig, paths: ProjectPaths) -> None:
 
 
 def load_project_config(root: Path, data_home: Path | None = None) -> ProjectConfig:
-    base = (Path(data_home).expanduser() if data_home is not None else Path.home() / ".project-memory").resolve()
     requested = Path(root).expanduser().resolve()
+    base = (Path(data_home).expanduser() if data_home is not None else requested / ".project-memory").resolve()
     project_id = _project_id_for(requested, base)
     project_file = base / "projects" / project_id / "config.json"
     legacy_file = base / "config.json"

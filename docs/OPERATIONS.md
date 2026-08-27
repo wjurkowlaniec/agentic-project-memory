@@ -1,6 +1,6 @@
 # Operations
 
-Agentic Project Memory is a local, project-scoped memory layer. Project data is stored outside the repository with restrictive permissions. The raw vault is separate from a redacted SQLite/FTS index used for retrieval and model-facing operations.
+Agentic Project Memory is a local, project-scoped memory layer. Project data is stored in `<PROJECT_ROOT>/.project-memory/` with restrictive permissions and the installer adds that directory to `.gitignore`. The raw vault is separate from a redacted SQLite/FTS index used for retrieval and model-facing operations.
 
 ## Install and register
 
@@ -15,10 +15,10 @@ The installer installs the checkout as an editable uv tool in normal mode, prese
 Load Nomic in the local model runtime before embedding work. Then run:
 
 ```bash
-pmem sync --root "<PROJECT_ROOT>"
-pmem search --root "<PROJECT_ROOT>" <query words>
-pmem preflight --root "<PROJECT_ROOT>" "<current user request>"
-pmem status --root "<PROJECT_ROOT>"
+pmem sync
+pmem search <query words>
+pmem preflight "<current user request>"
+pmem status
 ```
 
 Use `--extract` only after an extraction model passes the benchmark quality gate and is explicitly configured. Extraction is optional; source-only sync and FTS/quote fallback do not require it.
@@ -29,4 +29,4 @@ Do not place raw history, message bodies, model output, API keys, endpoint detai
 
 ## Scope and limits
 
-Adapters currently support Codex and Hermes only. Commands are explicit and local; there is no daemon or cloud service. Benchmarks use synthetic fixtures and aggregate metrics, so results vary with model, hardware, residency, context, and endpoint availability.
+Adapters support Codex, Hermes, Devin, Windsurf capture, and Claude Code. Commands are explicit and local; there is no daemon or cloud service. Benchmarks use synthetic fixtures and aggregate metrics, so results vary with model, hardware, residency, context, and endpoint availability.

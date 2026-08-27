@@ -50,9 +50,7 @@ class CaptureCliTests(unittest.TestCase):
                 "timestamp": 1_700_000_100,
                 "tool_info": {"transcript_path": str(transcript)},
             }
-            data_home = directory / "data"
             env = {
-                "PMEM_DATA_HOME": str(data_home),
                 "PMEM_WINDSURF_TRANSCRIPTS_HOME": str(transcript_root),
             }
             with patch.dict(os.environ, env, clear=False):
@@ -64,7 +62,7 @@ class CaptureCliTests(unittest.TestCase):
 
             self.assertEqual(result, 0)
             self.assertIn("captured", output.getvalue().lower())
-            project_dirs = list((data_home / "projects").glob("*/"))
+            project_dirs = list((root / ".project-memory" / "projects").glob("*/"))
             self.assertTrue(project_dirs)
             self.assertFalse(any(path.name in {"vault.sqlite3", "memory.sqlite3"} for path in project_dirs[0].iterdir()))
             source_dir = project_dirs[0] / "sources" / "windsurf"

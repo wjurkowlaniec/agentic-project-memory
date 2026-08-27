@@ -9,7 +9,7 @@ Repository: https://github.com/wjurkowlaniec/agentic-project-memory.git
 - Source adapters support Codex, Hermes, Devin, Windsurf, and Claude Code.
 - Devin is read from a safe SQLite backup snapshot (default `~/.local/share/devin/cli/sessions.db`); only exact project roots/aliases and user/assistant text are imported.
 - Windsurf capture is local-only: the installer can merge a `post_cascade_response_with_transcript` hook, but only official hook transcripts are accepted. No cache scraping or raw transcript copies are performed.
-- Raw vault data stays outside the repository in a user-owned project data directory.
+- Raw vault data stays in the project's private `.project-memory/` directory and is ignored by Git.
 - A redacted SQLite/FTS index is a separate model-facing boundary; raw inspection is explicit.
 - Search and preflight return compact evidence with source/session/object references.
 - There is no daemon, cloud service, automatic conversation reader, or background sync.
@@ -29,6 +29,14 @@ pmem discover --root ~/ai/research-platform
 ```
 
 It checks only known macOS/Linux locations for Codex, Devin, Claude Code, and Windsurf; it does not scan the disk or read transcript bodies.
+
+Project memory is always local to the project:
+
+```text
+<project>/.project-memory/projects/<project-id>/
+```
+
+The installer adds `/.project-memory/` to `.gitignore`. Existing global stores from older versions are moved into this local directory by `pmem migrate-local` (the installer runs it automatically).
 
 ## Quick start
 

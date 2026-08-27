@@ -84,7 +84,7 @@ class InstallerTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             calls = [line for line in log.read_text().splitlines() if line.startswith("pmem ")]
             self.assertEqual(calls[0].split()[0:2], ["pmem", "--help"])
-            self.assertEqual(calls[1].split()[0:2], ["pmem", "status"])
+            self.assertEqual(calls[1].split()[0:2], ["pmem", "migrate-local"])
             self.assertTrue(any(call.startswith("pmem init") for call in calls))
             self.assertTrue(any(call.startswith("pmem install-rules") for call in calls))
             self.assertEqual(sum(call.startswith("pmem status") for call in calls), 2)
@@ -111,6 +111,16 @@ class InstallerTests(unittest.TestCase):
             result = self.run_installer("--project-root", str(target), "--no-rules", "--skip-tool-install", env=env)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertNotIn("install-rules", log.read_text())
+
+    def test_installer_ignores_local_memory_directory(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "target"
+            target.mkdir()
+            (target / ".gitignore").write_text("node_modules/\n", encoding="utf-8")
+            env, _ = self.fake_environment(target)
+            result = self.run_installer("--project-root", str(target), "--skip-tool-install", env=env)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("/.project-memory/", (target / ".gitignore").read_text())
 
     def test_normal_mode_installs_editable_tool_with_selected_python(self):
         with tempfile.TemporaryDirectory() as directory:
