@@ -119,7 +119,7 @@ self.assertEqual(stat.S_IMODE(paths.config_file.stat().st_mode), 0o600)
 self.assertEqual(load_project_config(Path("/tmp/alias"), data_home=temp_home).name, "example")
 ```
 
-Run: `python3 -m unittest tests.test_config -v`  
+Run: `python3 -m unittest tests.test_config -v`
 Expected: FAIL because the package does not exist.
 
 - [ ] **Step 3: Implement configuration and restrictive path creation**
@@ -141,7 +141,7 @@ self.assertNotIn("raw_messages_fts", vault.table_names())
 self.assertIn("messages_fts", memory.table_names())
 ```
 
-Run: `python3 -m unittest tests.test_storage -v`  
+Run: `python3 -m unittest tests.test_storage -v`
 Expected: FAIL with missing repository classes.
 
 - [ ] **Step 5: Implement both SQLite schemas and repositories**
@@ -165,14 +165,14 @@ for sample in samples:
     self.assertGreater(len(redacted.matches), 0)
 ```
 
-Run: `python3 -m unittest tests.test_redaction -v`  
+Run: `python3 -m unittest tests.test_redaction -v`
 Expected: FAIL with missing `Redactor`.
 
 - [ ] **Step 7: Implement versioned redaction and run Task 1 tests**
 
 Expose `REDACTION_VERSION = 1` and `Redactor.redact(text) -> RedactionResult`. Do not log input text. Preserve typed markers such as `[REDACTED:AUTH_TOKEN]`.
 
-Run: `python3 -m unittest tests.test_config tests.test_storage tests.test_redaction -v`  
+Run: `python3 -m unittest tests.test_config tests.test_storage tests.test_redaction -v`
 Expected: PASS.
 
 - [ ] **Step 8: Update durable status**
@@ -245,7 +245,7 @@ Use `subprocess.run(..., stdout=PIPE, stderr=PIPE, text=True, timeout=...)`. Nev
 
 - [ ] **Step 6: Run adapter and idempotency tests**
 
-Run: `python3 -m unittest tests.test_codex_adapter tests.test_hermes_adapter tests.test_storage -v`  
+Run: `python3 -m unittest tests.test_codex_adapter tests.test_hermes_adapter tests.test_storage -v`
 Expected: PASS, including repeated imports with unchanged row counts.
 
 - [ ] **Step 7: Update worklog/status and run `git diff --check`**
@@ -308,7 +308,7 @@ Build prompts from one target message plus at most one preceding and one followi
 
 - [ ] **Step 6: Run Task 3 tests and update status**
 
-Run: `python3 -m unittest tests.test_lmstudio tests.test_extraction -v`  
+Run: `python3 -m unittest tests.test_lmstudio tests.test_extraction -v`
 Expected: PASS. Then run all tests and `git diff --check`.
 
 ---
@@ -441,9 +441,9 @@ Patch the service and invoke `main([...])`. Cover all spec commands, exit codes,
 
 - [ ] **Step 5: Run editable install and CLI tests**
 
-Run: `python3 -m pip install -e .`  
-Run: `python3 -m unittest tests.test_rules tests.test_cli -v`  
-Run: `pmem --help`  
+Run: `python3 -m pip install -e .`
+Run: `python3 -m unittest tests.test_rules tests.test_cli -v`
+Run: `pmem --help`
 Expected: install succeeds; tests pass; help lists all commands.
 
 - [ ] **Step 6: Run full suite, update status/worklog, and `git diff --check`**

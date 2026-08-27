@@ -1,8 +1,8 @@
 # Project Memory MVP Design
 
-**Date:** 2026-08-27  
-**Status:** approved direction, implementation pending  
-**Pilot:** `<SEP_ROOT>`  
+**Date:** 2026-08-27
+**Status:** approved direction, implementation pending
+**Pilot:** `<SEP_ROOT>`
 **Implementation repository:** `<PROJECT_ROOT>`
 
 ## Purpose
