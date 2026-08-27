@@ -80,6 +80,7 @@ class HermesAdapter:
             command[7:7] = ["--newer-than", str(newer)]
         messages_by_id: dict[tuple[str, str], NormalizedMessage] = {}
         session_ids: set[str] = set()
+        seen_hashes = {str(key): str(value) for key, value in dict(state.get("message_hashes", {})).items()}
         def parse_line(line: str) -> None:
             nonlocal newer
             try:
@@ -90,7 +91,6 @@ class HermesAdapter:
             if cwd is None or Path(str(cwd)).expanduser().resolve() not in {config.root, *config.aliases}:
                 return
             session_id = str(session.get("session_id", session.get("id", "")))
-            session_ids.add(session_id)
             updated = str(session.get("updated_at", session.get("updated", "")))
             for item in session.get("messages", []):
                 role = item.get("role")
@@ -103,10 +103,16 @@ class HermesAdapter:
                 if not content:
                     continue
                 digest = hashlib.sha256(content.encode("utf-8")).hexdigest()
+                checkpoint_key = f"{session_id}:{message_id}"
+                timestamp = str(item.get("timestamp", updated))
+                if seen_hashes.get(checkpoint_key) == digest:
+                    continue
                 messages_by_id[(session_id, message_id)] = NormalizedMessage(self.source, session_id, message_id, config.project_id,
-                    role, str(item.get("timestamp", updated)), content, None, digest, {})
-            if updated and (not newer or updated > str(newer)):
-                newer = updated
+                    role, timestamp, content, None, digest, {})
+                seen_hashes[checkpoint_key] = digest
+                session_ids.add(session_id)
+                if timestamp and (not newer or timestamp > str(newer)):
+                    newer = timestamp
         warnings: list[str] = []
         runner = self.command_runner if self.command_runner is not subprocess.run else self.streaming_runner
         # Keep the old injected CompletedProcess contract for unit tests and
@@ -190,4 +196,5 @@ class HermesAdapter:
         next_state = dict(state)
         if newer:
             next_state["newer_than"] = newer
+        next_state["message_hashes"] = seen_hashes
         return SyncBatch(len(session_ids), tuple(messages_by_id.values()), next_state, tuple(warnings))

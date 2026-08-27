@@ -69,6 +69,27 @@ class HermesAdapterTests(unittest.TestCase):
         self.assertEqual(len(result.messages), 1)
         self.assertEqual(result.messages[0].content, "new")
 
+    def test_message_timestamps_checkpoint_exports_without_session_updated_at(self):
+        record = {"session_id": "s", "cwd": "/synthetic/project", "messages": [
+            {"id": "u", "role": "user", "timestamp": "2026-08-27T12:00:00Z", "content": "first"},
+            {"id": "a", "role": "assistant", "timestamp": "2026-08-27T12:01:00Z", "content": "second"},
+        ]}
+        commands = []
+        def runner(command, **kwargs):
+            commands.append(command)
+            return subprocess.CompletedProcess(command, 0, json.dumps(record), "")
+
+        adapter = HermesAdapter(command_runner=runner)
+        config = ProjectConfig.create("synthetic", Path("/synthetic/project"))
+        first = adapter.scan(config, {})
+        second = adapter.scan(config, first.next_state)
+
+        self.assertEqual([item.content for item in first.messages], ["first", "second"])
+        self.assertEqual(second.messages, ())
+        self.assertEqual(second.sessions_seen, 0)
+        self.assertEqual(first.next_state["newer_than"], "2026-08-27T12:01:00Z")
+        self.assertIn("--newer-than", commands[1])
+
     def test_unredacted_export_is_sent_directly_to_injected_vault_writer(self):
         received = []
         commands = []
