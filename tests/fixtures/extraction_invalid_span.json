@@ -1,0 +1,1 @@
+{"items":[{"kind":"requirement","statement":"Use local inference","state":"confirmed","confidence":0.9,"evidence_message_id":"m-user","evidence_quote":"remote inference","evidence_start":0,"evidence_end":17,"direct_user_statement":true,"conflicts_with":[],"supersedes":[]}]}

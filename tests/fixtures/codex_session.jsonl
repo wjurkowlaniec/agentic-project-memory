@@ -1,0 +1,9 @@
+{"type":"session_meta","payload":{"id":"codex-1","cwd":"/synthetic/project","timestamp":"2026-08-27T10:00:00Z"}}
+{"type":"session_meta","payload":{"id":"codex-1","cwd":"/synthetic/alias","timestamp":"2026-08-27T10:00:01Z"}}
+{"type":"response_item","payload":{"id":"r-user","type":"message","role":"user","content":[{"type":"input_text","text":"Keep the fixture synthetic."}]}}
+{"type":"event_msg","payload":{"id":"mirror-user","type":"message","role":"user","message":"Keep the fixture synthetic."}}
+{"type":"response_item","payload":{"id":"r-assistant","type":"message","role":"assistant","content":[{"type":"output_text","text":"Understood."}]}}
+{"type":"response_item","payload":{"id":"r-tool","type":"function_call","name":"shell","arguments":"SECRET_TOOL_BODY"}}
+{"type":"response_item","payload":{"id":"r-reason","type":"reasoning","summary":[{"text":"hidden reasoning"}]}}
+{"type":"response_item","payload":{"id":"r-second","type":"message","role":"assistant","content":"Plain answer"}}
+{"type":"response_item","payload":{"id":"r-partial","type":"message","role":"user","content":[{"type":"input_text","text":"partial"}]}

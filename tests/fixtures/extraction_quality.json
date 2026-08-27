@@ -1,0 +1,510 @@
+{
+  "version": 1,
+  "secret_canaries": [
+    "BENCH_CANARY_PL_7F3A",
+    "BENCH_CANARY_EN_91C2",
+    "bench-secret-token-4D8E"
+  ],
+  "messages": [
+    {
+      "id": "m01",
+      "language": "pl",
+      "category": "direct_idea",
+      "role": "user",
+      "content": "Pomysł: użyjmy lokalnego indeksu pamięci.",
+      "labels": [
+        {
+          "statement": "Pomysł: użyjmy lokalnego indeksu pamięci.",
+          "direct": true,
+          "label_id": "label-001",
+          "message_id": "m01",
+          "expected_kind": "idea",
+          "evidence_quote": "Pomysł: użyjmy lokalnego indeksu pamięci.",
+          "evidence_start": 0,
+          "evidence_end": 41
+        }
+      ]
+    },
+    {
+      "id": "m02",
+      "language": "en",
+      "category": "direct_idea",
+      "role": "user",
+      "content": "Idea: keep the memory index local and deterministic.",
+      "labels": [
+        {
+          "statement": "Idea: keep the memory index local and deterministic.",
+          "direct": true,
+          "label_id": "label-002",
+          "message_id": "m02",
+          "expected_kind": "idea",
+          "evidence_quote": "Idea: keep the memory index local and deterministic.",
+          "evidence_start": 0,
+          "evidence_end": 52
+        }
+      ]
+    },
+    {
+      "id": "m03",
+      "language": "pl",
+      "category": "explicit_requirement",
+      "role": "user",
+      "content": "Wymaganie: CLI musi zwracać kod błędu po złamaniu bramki.",
+      "labels": [
+        {
+          "statement": "Wymaganie: CLI musi zwracać kod błędu po złamaniu bramki.",
+          "direct": true,
+          "label_id": "label-003",
+          "message_id": "m03",
+          "expected_kind": "requirement",
+          "evidence_quote": "Wymaganie: CLI musi zwracać kod błędu po złamaniu bramki.",
+          "evidence_start": 0,
+          "evidence_end": 57
+        }
+      ]
+    },
+    {
+      "id": "m04",
+      "language": "en",
+      "category": "explicit_requirement",
+      "role": "user",
+      "content": "Requirement: reports must contain aggregate metrics only.",
+      "labels": [
+        {
+          "statement": "Requirement: reports must contain aggregate metrics only.",
+          "direct": true,
+          "label_id": "label-004",
+          "message_id": "m04",
+          "expected_kind": "requirement",
+          "evidence_quote": "Requirement: reports must contain aggregate metrics only.",
+          "evidence_start": 0,
+          "evidence_end": 57
+        }
+      ]
+    },
+    {
+      "id": "m05",
+      "language": "pl",
+      "category": "constraint",
+      "role": "user",
+      "content": "Ograniczenie: nie pobieraj ani nie ładuj modeli podczas testów.",
+      "labels": [
+        {
+          "statement": "Ograniczenie: nie pobieraj ani nie ładuj modeli podczas testów.",
+          "direct": true,
+          "label_id": "label-005",
+          "message_id": "m05",
+          "expected_kind": "constraint",
+          "evidence_quote": "Ograniczenie: nie pobieraj ani nie ładuj modeli podczas testów.",
+          "evidence_start": 0,
+          "evidence_end": 63
+        }
+      ]
+    },
+    {
+      "id": "m06",
+      "language": "en",
+      "category": "constraint",
+      "role": "user",
+      "content": "Constraint: use the real MemoryRepository for retrieval fixtures.",
+      "labels": [
+        {
+          "statement": "Constraint: use the real MemoryRepository for retrieval fixtures.",
+          "direct": true,
+          "label_id": "label-006",
+          "message_id": "m06",
+          "expected_kind": "constraint",
+          "evidence_quote": "Constraint: use the real MemoryRepository for retrieval fixtures.",
+          "evidence_start": 0,
+          "evidence_end": 65
+        }
+      ]
+    },
+    {
+      "id": "m07",
+      "language": "pl",
+      "category": "rejection",
+      "role": "user",
+      "content": "Odrzucam pomysł globalnego cache bez zakresu projektu.",
+      "labels": [
+        {
+          "statement": "Odrzucam pomysł globalnego cache bez zakresu projektu.",
+          "direct": true,
+          "label_id": "label-007",
+          "message_id": "m07",
+          "expected_kind": "rejection",
+          "evidence_quote": "Odrzucam pomysł globalnego cache bez zakresu projektu.",
+          "evidence_start": 0,
+          "evidence_end": 54
+        }
+      ]
+    },
+    {
+      "id": "m08",
+      "language": "en",
+      "category": "rejection",
+      "role": "user",
+      "content": "I reject storing raw prompts in benchmark reports.",
+      "labels": [
+        {
+          "statement": "I reject storing raw prompts in benchmark reports.",
+          "direct": true,
+          "label_id": "label-008",
+          "message_id": "m08",
+          "expected_kind": "rejection",
+          "evidence_quote": "I reject storing raw prompts in benchmark reports.",
+          "evidence_start": 0,
+          "evidence_end": 50
+        }
+      ]
+    },
+    {
+      "id": "m09",
+      "language": "pl",
+      "category": "question",
+      "role": "user",
+      "content": "Czy raport pokaże średnie opóźnienie?",
+      "labels": []
+    },
+    {
+      "id": "m10",
+      "language": "en",
+      "category": "question",
+      "role": "user",
+      "content": "Should retrieval measure recall at five?",
+      "labels": []
+    },
+    {
+      "id": "m11",
+      "language": "pl",
+      "category": "agent_proposal",
+      "role": "assistant",
+      "content": "Proponuję dodać osobny indeks wektorowy dla propozycji.",
+      "labels": []
+    },
+    {
+      "id": "m12",
+      "language": "en",
+      "category": "agent_proposal",
+      "role": "assistant",
+      "content": "I propose using a second model concurrently.",
+      "labels": []
+    },
+    {
+      "id": "m13",
+      "language": "pl",
+      "category": "negation",
+      "role": "user",
+      "content": "Nie zapisuj treści fixture ani promptów w logach.",
+      "labels": [
+        {
+          "statement": "Nie zapisuj treści fixture ani promptów w logach.",
+          "direct": true,
+          "label_id": "label-009",
+          "message_id": "m13",
+          "expected_kind": "constraint",
+          "evidence_quote": "Nie zapisuj treści fixture ani promptów w logach.",
+          "evidence_start": 0,
+          "evidence_end": 49
+        }
+      ]
+    },
+    {
+      "id": "m14",
+      "language": "en",
+      "category": "negation",
+      "role": "user",
+      "content": "Do not treat assistant suggestions as confirmed intent.",
+      "labels": [
+        {
+          "statement": "Do not treat assistant suggestions as confirmed intent.",
+          "direct": true,
+          "label_id": "label-010",
+          "message_id": "m14",
+          "expected_kind": "constraint",
+          "evidence_quote": "Do not treat assistant suggestions as confirmed intent.",
+          "evidence_start": 0,
+          "evidence_end": 55
+        }
+      ]
+    },
+    {
+      "id": "m15",
+      "language": "pl",
+      "category": "supersession",
+      "role": "user",
+      "content": "Zastępuję wcześniejsze wymaganie: raport ma być JSON-em.",
+      "labels": [
+        {
+          "statement": "Zastępuję wcześniejsze wymaganie: raport ma być JSON-em.",
+          "direct": true,
+          "label_id": "label-011",
+          "message_id": "m15",
+          "expected_kind": "decision",
+          "evidence_quote": "Zastępuję wcześniejsze wymaganie: raport ma być JSON-em.",
+          "evidence_start": 0,
+          "evidence_end": 56
+        }
+      ]
+    },
+    {
+      "id": "m16",
+      "language": "en",
+      "category": "supersession",
+      "role": "user",
+      "content": "Supersede the earlier plan: dry-run is the default benchmark mode.",
+      "labels": [
+        {
+          "statement": "Supersede the earlier plan: dry-run is the default benchmark mode.",
+          "direct": true,
+          "label_id": "label-012",
+          "message_id": "m16",
+          "expected_kind": "decision",
+          "evidence_quote": "Supersede the earlier plan: dry-run is the default benchmark mode.",
+          "evidence_start": 0,
+          "evidence_end": 66
+        }
+      ]
+    },
+    {
+      "id": "m17",
+      "language": "pl",
+      "category": "chatter",
+      "role": "user",
+      "content": "Dzisiaj pada deszcz, a kawa jest dobra.",
+      "labels": []
+    },
+    {
+      "id": "m18",
+      "language": "en",
+      "category": "chatter",
+      "role": "user",
+      "content": "The meeting starts after lunch; unrelated to the project.",
+      "labels": []
+    },
+    {
+      "id": "m19",
+      "language": "pl",
+      "category": "secret_canary",
+      "role": "user",
+      "content": "Nie ujawniaj BENCH_CANARY_PL_7F3A w żadnym wyjściu.",
+      "labels": [
+        {
+          "statement": "Nie ujawniaj [REDACTED:CANARY] w żadnym wyjściu.",
+          "direct": true,
+          "label_id": "label-013",
+          "message_id": "m19",
+          "expected_kind": "constraint",
+          "evidence_quote": "Nie ujawniaj [REDACTED:CANARY] w żadnym wyjściu.",
+          "evidence_start": 0,
+          "evidence_end": 48
+        }
+      ]
+    },
+    {
+      "id": "m20",
+      "language": "en",
+      "category": "secret_canary",
+      "role": "user",
+      "content": "Never print BENCH_CANARY_EN_91C2 in logs.",
+      "labels": [
+        {
+          "statement": "Never print [REDACTED:CANARY] in logs.",
+          "direct": true,
+          "label_id": "label-014",
+          "message_id": "m20",
+          "expected_kind": "constraint",
+          "evidence_quote": "Never print [REDACTED:CANARY] in logs.",
+          "evidence_start": 0,
+          "evidence_end": 38
+        }
+      ]
+    },
+    {
+      "id": "m21",
+      "language": "pl",
+      "category": "secret_canary",
+      "role": "user",
+      "content": "Token bench-secret-token-4D8E pozostaje lokalny.",
+      "labels": [
+        {
+          "statement": "Token [REDACTED:CANARY] pozostaje lokalny.",
+          "direct": true,
+          "label_id": "label-015",
+          "message_id": "m21",
+          "expected_kind": "constraint",
+          "evidence_quote": "Token [REDACTED:CANARY] pozostaje lokalny.",
+          "evidence_start": 0,
+          "evidence_end": 42
+        }
+      ]
+    },
+    {
+      "id": "m22",
+      "language": "en",
+      "category": "direct_idea",
+      "role": "user",
+      "content": "Let's add deterministic ranking tie-breakers.",
+      "labels": [
+        {
+          "statement": "Let's add deterministic ranking tie-breakers.",
+          "direct": true,
+          "label_id": "label-016",
+          "message_id": "m22",
+          "expected_kind": "idea",
+          "evidence_quote": "Let's add deterministic ranking tie-breakers.",
+          "evidence_start": 0,
+          "evidence_end": 45
+        }
+      ]
+    },
+    {
+      "id": "m23",
+      "language": "pl",
+      "category": "explicit_requirement",
+      "role": "user",
+      "content": "Chcę dokładnych spanów dowodu w każdej etykiecie.",
+      "labels": [
+        {
+          "statement": "Chcę dokładnych spanów dowodu w każdej etykiecie.",
+          "direct": true,
+          "label_id": "label-017",
+          "message_id": "m23",
+          "expected_kind": "requirement",
+          "evidence_quote": "Chcę dokładnych spanów dowodu w każdej etykiecie.",
+          "evidence_start": 0,
+          "evidence_end": 49
+        }
+      ]
+    },
+    {
+      "id": "m24",
+      "language": "en",
+      "category": "constraint",
+      "role": "user",
+      "content": "Keep working-set estimates below six gigabytes.",
+      "labels": [
+        {
+          "statement": "Keep working-set estimates below six gigabytes.",
+          "direct": true,
+          "label_id": "label-018",
+          "message_id": "m24",
+          "expected_kind": "constraint",
+          "evidence_quote": "Keep working-set estimates below six gigabytes.",
+          "evidence_start": 0,
+          "evidence_end": 47
+        }
+      ]
+    },
+    {
+      "id": "m25",
+      "language": "pl",
+      "category": "rejection",
+      "role": "user",
+      "content": "Nie akceptuję fikcyjnych wyników live benchmarku.",
+      "labels": [
+        {
+          "statement": "Nie akceptuję fikcyjnych wyników live benchmarku.",
+          "direct": true,
+          "label_id": "label-019",
+          "message_id": "m25",
+          "expected_kind": "rejection",
+          "evidence_quote": "Nie akceptuję fikcyjnych wyników live benchmarku.",
+          "evidence_start": 0,
+          "evidence_end": 49
+        }
+      ]
+    },
+    {
+      "id": "m26",
+      "language": "en",
+      "category": "question",
+      "role": "user",
+      "content": "Can the runner distinguish a gate failure from an execution error?",
+      "labels": []
+    },
+    {
+      "id": "m27",
+      "language": "pl",
+      "category": "agent_proposal",
+      "role": "assistant",
+      "content": "Możemy pominąć testy i od razu uruchomić model.",
+      "labels": []
+    },
+    {
+      "id": "m28",
+      "language": "en",
+      "category": "negation",
+      "role": "user",
+      "content": "No live model downloads are allowed in this task.",
+      "labels": [
+        {
+          "statement": "No live model downloads are allowed in this task.",
+          "direct": true,
+          "label_id": "label-020",
+          "message_id": "m28",
+          "expected_kind": "constraint",
+          "evidence_quote": "No live model downloads are allowed in this task.",
+          "evidence_start": 0,
+          "evidence_end": 49
+        }
+      ]
+    },
+    {
+      "id": "m29",
+      "language": "pl",
+      "category": "chatter",
+      "role": "assistant",
+      "content": "Wygląda na to, że wszystko jest gotowe.",
+      "labels": []
+    },
+    {
+      "id": "m30",
+      "language": "en",
+      "category": "supersession",
+      "role": "user",
+      "content": "The new report directory replaces the old temporary path.",
+      "labels": [
+        {
+          "statement": "The new report directory replaces the old temporary path.",
+          "direct": true,
+          "label_id": "label-021",
+          "message_id": "m30",
+          "expected_kind": "decision",
+          "evidence_quote": "The new report directory replaces the old temporary path.",
+          "evidence_start": 0,
+          "evidence_end": 57
+        }
+      ]
+    },
+    {
+      "id": "m31",
+      "language": "en",
+      "category": "explicit_requirement",
+      "role": "user",
+      "content": "Use FTS for diagnostics and keep embeddings mandatory.",
+      "labels": [
+        {
+          "label_id": "label-022",
+          "message_id": "m31",
+          "expected_kind": "idea",
+          "statement": "Use FTS for diagnostics",
+          "evidence_quote": "Use FTS for diagnostics",
+          "evidence_start": 0,
+          "evidence_end": 23,
+          "direct": true
+        },
+        {
+          "label_id": "label-023",
+          "message_id": "m31",
+          "expected_kind": "requirement",
+          "statement": "keep embeddings mandatory.",
+          "evidence_quote": "keep embeddings mandatory.",
+          "evidence_start": 28,
+          "evidence_end": 54,
+          "direct": true
+        }
+      ]
+    }
+  ]
+}

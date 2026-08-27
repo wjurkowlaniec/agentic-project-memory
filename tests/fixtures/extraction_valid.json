@@ -1,0 +1,1 @@
+{"items":[{"kind":"constraint","statement":"Use at most 6 GB RAM","state":"confirmed","confidence":0.95,"evidence_message_id":"m-user","evidence_quote":"max 6GB","evidence_start":12,"evidence_end":19,"direct_user_statement":true,"conflicts_with":[],"supersedes":[]}]}

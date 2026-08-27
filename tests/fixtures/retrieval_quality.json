@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "description": "Bilingual and cross-lingual retrieval cases scored against structured label IDs.",
+  "queries": [
+    {"query":"lokalny indeks pamięci", "language":"pl", "expected_label_id":"label-001"},
+    {"query":"aggregate metrics only", "language":"en", "expected_label_id":"label-004"},
+    {"query":"rzeczywiste repozytorium do fixture retrieval", "language":"pl", "expected_label_id":"label-006"},
+    {"query":"raw prompts benchmark reports", "language":"en", "expected_label_id":"label-008"},
+    {"query":"ranking deterministyczny", "language":"pl", "expected_label_id":"label-016"},
+    {"query":"working-set below six gigabytes", "language":"en", "expected_label_id":"label-018"}
+  ]
+}
