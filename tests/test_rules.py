@@ -35,6 +35,12 @@ class RuleInstallerTests(unittest.TestCase):
         )
         self.assertNotIn("--extract", rendered)
 
+    def test_all_agent_input_sent_to_pmem_must_be_english(self):
+        rendered = render_rules(Path("/tmp/project"))
+        self.assertIn("All text sent to pmem must be in English", rendered)
+        self.assertIn("<current user request translated to English>", rendered)
+        self.assertIn("Respond to the user in the user's language", rendered)
+
     def test_installs_exact_five_contract_and_is_idempotent(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

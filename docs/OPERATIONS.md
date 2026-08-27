@@ -23,6 +23,8 @@ pmem status
 
 Use `--extract` only after an extraction model passes the benchmark quality gate and is explicitly configured. Extraction is optional; source-only sync and FTS/quote fallback do not require it.
 
+Agent integrations must translate every query or request sent to `pmem` into English. User-facing responses remain in the user's language.
+
 ## Privacy
 
 Do not place raw history, message bodies, model output, API keys, endpoint details, receipt IDs, object IDs, source digests, or local benchmark filenames in repository documentation. Raw inspection requires an explicit opt-in and should never be copied to logs or public artifacts.

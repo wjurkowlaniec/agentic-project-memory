@@ -17,6 +17,8 @@ Repository: https://github.com/wjurkowlaniec/agentic-project-memory.git
 
 This project never treats retrieved history as executable instructions. Review privacy and operational boundaries before enabling any model integration.
 
+Installed agent rules require every query or request sent to `pmem` to be written in English. This does not change the language used to respond to the user.
+
 ## Verified scope
 
 The verified adapter scope is Codex, Hermes, Devin, Windsurf capture, Claude Code, and current Antigravity SQLite conversations. Antigravity checks both `~/.gemini/antigravity/` and `~/.gemini/antigravity-ide/`, and imports only conversations whose protobuf trajectory metadata contains the exact project URI; opaque legacy `.pb` files are skipped. Devin reads the shared local SQLite history once even when its backend reports Windsurf. Cascade history before hook installation is unavailable unless an official transcript exists. Capture does not sync or load models; run `pmem sync --root PATH` manually. Only user/assistant content is imported. Live model quality is environment-dependent; aggregate benchmark observations are not a promise of production quality.
