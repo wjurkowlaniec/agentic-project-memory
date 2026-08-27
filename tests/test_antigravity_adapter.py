@@ -123,6 +123,31 @@ class AntigravityAdapterTests(unittest.TestCase):
         self.assertEqual({message.session_id for message in result.messages}, {"classic", "ide"})
         self.assertEqual({message.content for message in result.messages}, {"antigravity", "antigravity-ide"})
 
+    def test_backfills_pascal_case_antigravity_commands_without_reimporting_messages(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            root = directory / "project"; root.mkdir()
+            conversations = directory / "conversations"; conversations.mkdir()
+            brain = directory / "brain"; brain.mkdir()
+            self.create_conversation(conversations, brain, "session", root, [
+                {"step_index": 1, "type": "USER_INPUT", "status": "DONE", "created_at": "2026-08-27T10:00:00Z", "content": "Already imported."},
+                {"step_index": 2, "type": "PLANNER_RESPONSE", "status": "DONE", "created_at": "2026-08-27T10:01:00Z", "tool_calls": [
+                    {"name": "run_command", "args": {"CommandLine": "git status", "Cwd": str(root)}},
+                ]},
+            ])
+            transcript = brain / "session" / ".system_generated" / "logs" / "transcript_full.jsonl"
+            state = {"files": {str(transcript.resolve()): hashlib.sha256(transcript.read_bytes()).hexdigest()}}
+            adapter = AntigravityAdapter(conversations, brain)
+
+            first = adapter.scan(ProjectConfig.create("project", root), state)
+            second = adapter.scan(ProjectConfig.create("project", root), first.next_state)
+
+        self.assertEqual(first.messages, ())
+        self.assertEqual([(command.command, command.cwd) for command in first.commands], [("git status", str(root.resolve()))])
+        self.assertEqual(first.next_state["command_index_version"], 1)
+        self.assertEqual(second.messages, ())
+        self.assertEqual(second.commands, ())
+
 
 if __name__ == "__main__":
     unittest.main()

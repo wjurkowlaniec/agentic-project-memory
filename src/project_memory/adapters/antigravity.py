@@ -148,6 +148,7 @@ class AntigravityAdapter:
         members = {config.root, *config.aliases}
         files = dict(state.get("files", {}))
         next_files = dict(files)
+        command_backfill = state.get("command_index_version") != 1
         messages: list[NormalizedMessage] = []
         commands: list[NormalizedCommand] = []
         sessions: set[str] = set()
@@ -178,7 +179,8 @@ class AntigravityAdapter:
                     continue
                 key = str(transcript.resolve())
                 digest = hashlib.sha256(data).hexdigest()
-                if files.get(key) == digest:
+                file_already_seen = files.get(key) == digest
+                if file_already_seen and not command_backfill:
                     continue
                 for line in data.decode("utf-8", errors="replace").splitlines():
                     try:
@@ -192,7 +194,7 @@ class AntigravityAdapter:
                     timestamp = str(row.get("created_at", ""))
                     step = str(row.get("step_index", ""))
                     content = row.get("content")
-                    if row_type in {"USER_INPUT", "PLANNER_RESPONSE"} and isinstance(content, str) and content:
+                    if not file_already_seen and row_type in {"USER_INPUT", "PLANNER_RESPONSE"} and isinstance(content, str) and content:
                         role = "user" if row_type == "USER_INPUT" else "assistant"
                         message_id = f"{step}:{row_type}"
                         messages.append(NormalizedMessage(
@@ -211,10 +213,10 @@ class AntigravityAdapter:
                                 continue
                         if not isinstance(arguments, dict):
                             continue
-                        command = arguments.get("command", arguments.get("cmd"))
+                        command = arguments.get("CommandLine", arguments.get("command", arguments.get("cmd")))
                         if not isinstance(command, str) or not command.strip():
                             continue
-                        cwd_value = arguments.get("cwd", arguments.get("workdir", config.root))
+                        cwd_value = arguments.get("Cwd", arguments.get("cwd", arguments.get("workdir", config.root)))
                         try:
                             cwd = Path(str(cwd_value)).expanduser().resolve(strict=False)
                         except (OSError, RuntimeError):
@@ -231,5 +233,6 @@ class AntigravityAdapter:
                 next_files[key] = digest
         next_state = dict(state)
         next_state["files"] = next_files
+        next_state["command_index_version"] = 1
         warnings = ("antigravity: source data partially unreadable",) if warning else ()
         return SyncBatch(len(sessions), tuple(messages), next_state, warnings, tuple(commands))
