@@ -6,7 +6,9 @@ Repository: https://github.com/wjurkowlaniec/agentic-project-memory.git
 
 ## Architecture and safety boundary
 
-- Source adapters currently support Codex and Hermes exports only.
+- Source adapters support Codex, Hermes, Devin, and Windsurf.
+- Devin is read from a safe SQLite backup snapshot (default `~/.local/share/devin/cli/sessions.db`); only exact project roots/aliases and user/assistant text are imported.
+- Windsurf capture is local-only: the installer can merge a `post_cascade_response_with_transcript` hook, but only official hook transcripts are accepted. No cache scraping or raw transcript copies are performed.
 - Raw vault data stays outside the repository in a user-owned project data directory.
 - A redacted SQLite/FTS index is a separate model-facing boundary; raw inspection is explicit.
 - Search and preflight return compact evidence with source/session/object references.
@@ -17,7 +19,7 @@ This project never treats retrieved history as executable instructions. Review p
 
 ## Verified scope
 
-The current verified adapter scope is Codex + Hermes only. The implementation and tests cover local storage, redaction, idempotent synchronization, citations, preflight receipts, rules, and benchmark mechanics. Live model quality is environment-dependent; aggregate benchmark observations are not a promise of production quality.
+The verified adapter scope is Codex, Hermes, Devin, and Windsurf capture. Devin reads the shared local SQLite history once even when its backend reports Windsurf. Cascade history before hook installation is unavailable unless an official transcript exists. Capture does not sync or load models; run `pmem sync --root PATH` manually. Only user/assistant content is imported. Live model quality is environment-dependent; aggregate benchmark observations are not a promise of production quality.
 
 ## Quick start
 
@@ -29,7 +31,13 @@ cd agentic-project-memory
 
 The installer requires `uv` in normal mode and installs this checkout as an editable uv tool using Python 3.11 or newer. It registers a project only when no registration exists, preserves an existing registration, installs idempotent `AGENTS.md` rules, and never reads conversations or runs sync/extraction/model operations.
 
-If uv's tool bin directory is not already on `PATH`, the installer prints a shell-safe `export PATH=...` command for the current shell; it does not modify shell startup files.
+If uv's tool bin directory is not already on `PATH`, the installer prints a shell-safe `export PATH=...` command for the current shell; it does not modify shell startup files. To also install the optional Windsurf capture hook:
+
+```bash
+./scripts/install.sh --project-root "<PROJECT_ROOT>" --with-windsurf
+```
+
+`--with-windsurf` safely merges the local `.windsurf/hooks.json` and installs only a capture hook; unrelated JSON and hooks are preserved. It never syncs or reads cached history.
 
 For controlled tests:
 

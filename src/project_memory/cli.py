@@ -9,6 +9,8 @@ from typing import Sequence
 
 from .adapters.codex import CodexAdapter
 from .adapters.hermes import HermesAdapter
+from .adapters.devin import DevinAdapter
+from .adapters.windsurf import WindsurfAdapter, capture_windsurf_event
 from .benchmark import BenchmarkError, BenchmarkRunner, load_fixture, write_report
 from .config import ProjectConfig, ProjectPaths, load_project_config, save_project_config
 from .extraction import ExtractionEngine
@@ -16,7 +18,7 @@ from .lmstudio import LMStudioClient
 from .rules import install_rules
 from .service import ProjectMemoryService
 
-COMMANDS = ("init", "sync", "search", "preflight", "inspect", "suppress", "correct", "benchmark", "install-rules", "status", "rebuild")
+COMMANDS = ("init", "sync", "search", "preflight", "inspect", "suppress", "correct", "benchmark", "install-rules", "status", "rebuild", "capture-windsurf")
 _DISPLAY_QUOTE_LIMIT = 600
 _DISPLAY_TRUNCATION_MARKER = " …[truncated]"
 
@@ -37,6 +39,7 @@ def _parser() -> argparse.ArgumentParser:
     modes = bench.add_mutually_exclusive_group(); modes.add_argument("--extraction-only", action="store_true"); modes.add_argument("--retrieval-only", action="store_true")
     bench.add_argument("--allow-combined-models", action="store_true", help=argparse.SUPPRESS)
     rules = subs.add_parser("install-rules"); rules.add_argument("--root", required=True); rules.add_argument("--create-agents", action="store_true")
+    capture = subs.add_parser("capture-windsurf"); capture.add_argument("--root", required=True)
     return parser
 
 
@@ -47,6 +50,8 @@ def service_factory(root: Path) -> ProjectMemoryService:
     adapters = {
         "codex": CodexAdapter(),
         "hermes": HermesAdapter(),
+        "devin": DevinAdapter(),
+        "windsurf": WindsurfAdapter(),
     }
     client = LMStudioClient()
     extraction_model = config.model_names.get("extraction")
@@ -100,7 +105,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             config = ProjectConfig(
                 name=args.name, root=root,
                 aliases=tuple(Path(alias).expanduser().resolve() for alias in args.alias),
-                source_locations={"codex": str(Path.home() / ".codex" / "sessions")},
+                source_locations={
+                    "codex": str(Path.home() / ".codex" / "sessions"),
+                    "devin": str(Path.home() / ".local/share/devin/cli/sessions.db"),
+                    "windsurf": str((Path(os.environ["PMEM_DATA_HOME"]).expanduser() if os.environ.get("PMEM_DATA_HOME") else Path.home() / ".project-memory") / "projects" / ProjectConfig.create(args.name, root).project_id / "sources" / "windsurf"),
+                },
                 model_names={key: value for key, value in {
                     "extraction": os.environ.get("PMEM_EXTRACTION_MODEL", ""),
                     "embedding": os.environ.get("PMEM_EMBEDDING_MODEL", ""),
@@ -109,6 +118,15 @@ def main(argv: Sequence[str] | None = None) -> int:
             data_home = Path(os.environ["PMEM_DATA_HOME"]).expanduser() if os.environ.get("PMEM_DATA_HOME") else None
             save_project_config(config, ProjectPaths.for_root(root, data_home))
             print(f"Initialized project {config.name} ({config.project_id}) at {config.root}")
+            return 0
+        if args.command == "capture-windsurf":
+            data_home = Path(os.environ["PMEM_DATA_HOME"]).expanduser() if os.environ.get("PMEM_DATA_HOME") else None
+            config = load_project_config(Path(args.root), data_home)
+            paths = ProjectPaths.for_root(config.root, data_home)
+            inbox = Path(config.source_locations.get("windsurf", str(paths.project_dir / "sources" / "windsurf"))).expanduser()
+            event = __import__("json").load(sys.stdin)
+            captured = capture_windsurf_event(event, transcript_root=os.environ.get("PMEM_WINDSURF_TRANSCRIPTS_HOME"), inbox_dir=inbox)
+            print(f"Captured Windsurf transcript: {captured}")
             return 0
         if args.command == "install-rules":
             paths = install_rules(Path(args.root), create_agents=args.create_agents)

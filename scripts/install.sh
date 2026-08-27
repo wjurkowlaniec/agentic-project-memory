@@ -2,7 +2,7 @@
 set -euo pipefail
 
 usage() {
-    printf '%s\n' "Usage: $0 --project-root PATH [--name NAME] [--embedding-model MODEL] [--python PYTHON] [--no-rules] [--skip-tool-install]" >&2
+    printf '%s\n' "Usage: $0 --project-root PATH [--name NAME] [--embedding-model MODEL] [--python PYTHON] [--no-rules] [--with-windsurf] [--skip-tool-install]" >&2
 }
 
 project_root=''
@@ -11,6 +11,7 @@ embedding_model=''
 python_spec='3.11'
 no_rules=0
 skip_tool_install=0
+with_windsurf=0
 
 while (($# > 0)); do
     case "$1" in
@@ -40,6 +41,10 @@ while (($# > 0)); do
             ;;
         --skip-tool-install)
             skip_tool_install=1
+            shift
+            ;;
+        --with-windsurf)
+            with_windsurf=1
             shift
             ;;
         -h|--help)
@@ -111,6 +116,36 @@ fi
 
 if ((no_rules == 0)); then
     "$pmem" install-rules --root "$project_root" --create-agents
+fi
+
+if ((with_windsurf == 1)); then
+    hooks_file="$project_root/.windsurf/hooks.json"
+    mkdir -p "$project_root/.windsurf"
+    python3 - "$hooks_file" "$pmem" "$project_root" <<'PY'
+import json, os, shlex, sys, tempfile
+path, pmem, root = sys.argv[1:]
+try:
+    with open(path, encoding="utf-8") as f: data = json.load(f)
+except FileNotFoundError: data = {}
+except (OSError, ValueError): raise SystemExit("error: refusing to overwrite invalid .windsurf/hooks.json")
+if not isinstance(data, dict): raise SystemExit("error: refusing to overwrite invalid .windsurf/hooks.json")
+hooks = data.setdefault("hooks", {})
+if not isinstance(hooks, dict): raise SystemExit("error: refusing to overwrite invalid .windsurf/hooks.json")
+event = "post_cascade_response_with_transcript"
+command = f"{pmem} capture-windsurf --root {shlex.quote(root)}"
+entries = hooks.setdefault(event, [])
+if not isinstance(entries, list): raise SystemExit("error: refusing to overwrite invalid Windsurf hook")
+if not any(isinstance(item, dict) and item.get("command") == command for item in entries): entries.append({"command": command})
+directory = os.path.dirname(path); fd, temp = tempfile.mkstemp(prefix=".hooks.", dir=directory)
+try:
+    os.fchmod(fd, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2); f.write("\n"); f.flush(); os.fsync(f.fileno())
+    os.replace(temp, path)
+finally:
+    if os.path.exists(temp): os.unlink(temp)
+PY
+    printf 'Installed Windsurf capture hook in %s\n' "$hooks_file"
 fi
 
 "$pmem" status --root "$project_root"
